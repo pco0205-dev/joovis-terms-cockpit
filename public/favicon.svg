@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="JOOVIS Terms Cockpit icon">
+  <rect width="512" height="512" rx="96" fill="#101820" />
+  <path d="M116 138h280v236H116z" fill="#087f8c" />
+  <path d="M146 168h220v48H146zM146 246h132v26H146zM146 294h188v26H146zM146 342h104v26H146z" fill="#edf2f4" />
+  <circle cx="366" cy="324" r="34" fill="#ffc36a" />
+  <path d="M116 138h280v236H116z" fill="none" stroke="#edf2f4" stroke-width="20" />
+  <path d="M98 402h316" stroke="#5cc8c2" stroke-width="24" stroke-linecap="round" />
+</svg>

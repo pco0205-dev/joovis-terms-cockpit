@@ -1,11 +1,11 @@
-const CACHE_NAME = 'joovis-terms-cockpit-v2'
+const CACHE_NAME = 'joovis-terms-cockpit-v6'
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/favicon.svg',
-  '/icon-192-v2.png',
-  '/icon-512-v2.png',
+  '/icon-192-v6.png',
+  '/icon-512-v6.png',
 ]
 
 self.addEventListener('install', (event) => {

@@ -1,5 +1,12 @@
-const CACHE_NAME = 'joovis-terms-cockpit-v1'
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg']
+const CACHE_NAME = 'joovis-terms-cockpit-v2'
+const APP_SHELL = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/favicon.svg',
+  '/icon-192-v2.png',
+  '/icon-512-v2.png',
+]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

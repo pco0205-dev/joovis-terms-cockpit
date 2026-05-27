@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="JOOVIS Terms Cockpit icon">
-  <rect width="512" height="512" rx="96" fill="#101820" />
-  <path d="M116 138h280v236H116z" fill="#087f8c" />
-  <path d="M146 168h220v48H146zM146 246h132v26H146zM146 294h188v26H146zM146 342h104v26H146z" fill="#edf2f4" />
-  <circle cx="366" cy="324" r="34" fill="#ffc36a" />
-  <path d="M116 138h280v236H116z" fill="none" stroke="#edf2f4" stroke-width="20" />
-  <path d="M98 402h316" stroke="#5cc8c2" stroke-width="24" stroke-linecap="round" />
+  <rect width="512" height="512" rx="112" fill="#101820" />
+  <rect x="64" y="64" width="384" height="384" rx="92" fill="#087f8c" opacity="0.22" />
+  <rect x="112" y="104" width="288" height="304" rx="52" fill="#edf2f4" />
+  <rect x="136" y="128" width="240" height="256" rx="34" fill="#101820" />
+  <path d="M176 300c22 18 48 27 80 27s58-9 80-27" fill="none" stroke="#5cc8c2" stroke-width="18" stroke-linecap="round" />
+  <path d="M172 190h168M172 232h116" stroke="#edf2f4" stroke-width="18" stroke-linecap="round" />
+  <circle cx="340" cy="304" r="34" fill="#ffc36a" />
+  <text x="164" y="294" fill="#edf2f4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="94" font-weight="800" letter-spacing="0">JT</text>
 </svg>

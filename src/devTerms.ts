@@ -1,6 +1,6 @@
-import type { DevTerm } from './types'
+import type { DeckId, DevTerm, Difficulty, RawDevTerm } from './types'
 
-export const devTerms = [
+const legacyTerms = [
   {
     id: 'context',
     term: 'Context',
@@ -1079,4 +1079,463 @@ export const devTerms = [
     codexPromptExample: 'Command hygiene을 지켜 현재 workspace에서만 npm install과 build를 실행해 주세요.',
     category: 'JOOVIS-Specific',
   },
-] satisfies DevTerm[]
+] satisfies RawDevTerm[]
+
+const aiCommandTerms = [
+  makeAiTerm({
+    term: 'Task Boundary Prompt',
+    pronunciation: '태스크 바운더리 프롬프트',
+    koreanMeaning: 'AI에게 작업 경계와 금지 경계를 함께 알려 주는 지시',
+    simpleMeaning: '무엇을 할지와 하지 않을지를 한 번에 말하는 프롬프트입니다.',
+    category: 'Prompt Quality',
+    difficulty: 'basic',
+    badExpression: '이거 해줘.',
+    goodExpression: '현재 폴더 안에서만 수정하고, 금지 경계와 검증 결과를 마지막에 분리해서 보고해줘.',
+    relatedTerms: ['Scope', 'Boundary', 'Constraint'],
+  }),
+  makeAiTerm({
+    term: 'Ambiguity Budget',
+    pronunciation: '앰비규이티 버짓',
+    koreanMeaning: '요청 안에 남겨도 되는 모호함의 허용량',
+    simpleMeaning: 'AI가 추측해도 되는 부분과 물어봐야 하는 부분을 나누는 기준입니다.',
+    category: 'Prompt Quality',
+    difficulty: 'intermediate',
+    badExpression: '적당히 알아서 해.',
+    goodExpression: '명확한 요구는 바로 실행하고, 위험한 모호함은 작업 전에 질문해줘.',
+    relatedTerms: ['Assumption', 'Clarifying Question'],
+  }),
+  makeAiTerm({
+    term: 'Output Contract',
+    pronunciation: '아웃풋 컨트랙트',
+    koreanMeaning: 'AI 답변이 따라야 하는 출력 형식 약속',
+    simpleMeaning: '마지막 보고서나 분석 결과의 모양을 미리 정하는 것입니다.',
+    category: 'Prompt Quality',
+    difficulty: 'basic',
+    badExpression: '결과 알려줘.',
+    goodExpression: 'STATUS, 변경 파일, 검증, 남은 위험 순서로만 보고해줘.',
+    relatedTerms: ['Contract', 'Acceptance Criteria'],
+  }),
+  makeAiTerm({
+    term: 'Evidence Request',
+    pronunciation: '에비던스 리퀘스트',
+    koreanMeaning: 'AI에게 주장만 말하지 말고 근거를 함께 요구하는 지시',
+    simpleMeaning: '왜 그렇게 판단했는지 확인 가능한 근거를 요구합니다.',
+    category: 'Review / QA',
+    difficulty: 'intermediate',
+    badExpression: '괜찮은지 봐줘.',
+    goodExpression: '문제라고 판단한 근거 파일, 줄, 재현 조건을 함께 제시해줘.',
+    relatedTerms: ['Finding', 'Repro Steps'],
+  }),
+  makeAiTerm({
+    term: 'Stop Condition',
+    pronunciation: '스톱 컨디션',
+    koreanMeaning: 'AI가 계속 진행하지 말고 멈춰야 하는 조건',
+    simpleMeaning: '위험하거나 정보가 부족할 때 멈추는 규칙입니다.',
+    category: 'Boundary / Safety',
+    difficulty: 'basic',
+    badExpression: '막히면 알아서 해.',
+    goodExpression: '경로가 맞지 않거나 외부 repo 접근이 필요하면 즉시 멈추고 BLOCKED로 보고해줘.',
+    relatedTerms: ['Fail-closed', 'Guard'],
+  }),
+  makeAiTerm({
+    term: 'Review Lens',
+    pronunciation: '리뷰 렌즈',
+    koreanMeaning: 'AI가 어떤 관점으로 코드를 볼지 정하는 기준',
+    simpleMeaning: '버그, UX, 보안, 성능 중 무엇을 우선 볼지 지정합니다.',
+    category: 'Review / QA',
+    difficulty: 'intermediate',
+    badExpression: '전체적으로 리뷰해줘.',
+    goodExpression: '버그와 회귀 위험을 먼저 보고, 스타일 의견은 마지막에 분리해줘.',
+    relatedTerms: ['Finding', 'Severity'],
+  }),
+  makeAiTerm({
+    term: 'Context Compression',
+    pronunciation: '컨텍스트 컴프레션',
+    koreanMeaning: '긴 맥락을 핵심 판단 정보로 압축하는 것',
+    simpleMeaning: 'AI가 놓치지 않게 중요한 사실만 구조화합니다.',
+    category: 'AI Command',
+    difficulty: 'advanced',
+    badExpression: '이 대화 전체 기억해서 해.',
+    goodExpression: '목표, 금지사항, 현재 상태, 마지막 결정만 요약해서 다음 작업 기준으로 삼아줘.',
+    relatedTerms: ['Context', 'Token Budget'],
+  }),
+  makeAiTerm({
+    term: 'Verification Prompt',
+    pronunciation: '베리피케이션 프롬프트',
+    koreanMeaning: '완료 전에 검증을 요구하는 지시',
+    simpleMeaning: 'AI가 구현 후 빌드, 테스트, 수동 확인을 하게 만듭니다.',
+    category: 'Review / QA',
+    difficulty: 'basic',
+    badExpression: '끝나면 말해.',
+    goodExpression: '구현 후 build와 lint를 실행하고 실패하면 고친 뒤 결과를 보고해줘.',
+    relatedTerms: ['Validation', 'Checker'],
+  }),
+] satisfies RawDevTerm[]
+
+const librariesToolTerms = [
+  makeToolTerm('React', '리액트', 'UI를 컴포넌트 단위로 만드는 JavaScript 라이브러리', '화면을 작은 부품으로 나누어 조립합니다.', 'Frontend Frameworks'),
+  makeToolTerm('Component', '컴포넌트', '재사용 가능한 UI 또는 기능 단위', '버튼, 카드, 화면 조각처럼 독립된 부품입니다.', 'React'),
+  makeToolTerm('Hook', '훅', 'React에서 상태와 생명주기 기능을 쓰는 함수 패턴', 'useState, useMemo처럼 컴포넌트에 기능을 붙입니다.', 'React'),
+  makeToolTerm('Vite', '비트', '빠른 개발 서버와 빌드 도구', 'React 앱을 빠르게 실행하고 dist로 빌드합니다.', 'Build Tools'),
+  makeToolTerm('TypeScript', '타입스크립트', 'JavaScript에 타입 검사를 더한 언어', '데이터 shape와 함수 계약을 빌드 전에 확인합니다.', 'Languages'),
+  makeToolTerm('Node.js', '노드 제이에스', '브라우저 밖에서 JavaScript를 실행하는 런타임', 'npm, Vite, 빌드 도구가 주로 Node.js에서 실행됩니다.', 'Runtime'),
+  makeToolTerm('npm', '엔피엠', 'Node.js 패키지 설치와 스크립트 실행 도구', 'npm.cmd run build처럼 프로젝트 명령을 실행합니다.', 'Package Managers'),
+  makeToolTerm('package.json', '패키지 제이슨', '프로젝트 스크립트와 의존성을 적는 파일', 'build, lint 같은 명령과 React 의존성을 관리합니다.', 'Package Managers'),
+  makeToolTerm('ESLint', '이에스린트', '코드 스타일과 잠재 오류를 검사하는 도구', 'React hook 규칙과 위험한 패턴을 자동으로 확인합니다.', 'Quality Tools'),
+  makeToolTerm('Python', '파이썬', '자동화, 데이터 처리, 분석에 자주 쓰는 언어', '간단한 스크립트나 데이터 점검에 유용합니다.', 'Languages'),
+  makeToolTerm('pandas', '판다스', '표 형태 데이터를 다루는 Python 라이브러리', 'CSV, 엑셀, 데이터프레임 처리에 자주 쓰입니다.', 'Data Tools'),
+  makeToolTerm('DuckDB', '덕디비', '파일 기반 분석 SQL 엔진', '로컬 parquet/CSV를 빠르게 질의할 때 유용합니다.', 'Data Tools'),
+  makeToolTerm('JSON', '제이슨', '웹과 설정 파일에서 널리 쓰는 구조화 데이터 형식', 'manifest와 localStorage serialization에 자주 등장합니다.', 'Data Formats'),
+  makeToolTerm('Parquet', '파케이', '분석용 컬럼 기반 데이터 파일 형식', '대용량 표 데이터를 효율적으로 읽고 저장합니다.', 'Data Formats'),
+  makeToolTerm('CLI', '씨엘아이', '터미널에서 명령어로 쓰는 도구', 'npm.cmd, git, gh 같은 명령형 도구를 뜻합니다.', 'Terminal Tools'),
+  makeToolTerm('PowerShell', '파워셸', 'Windows에서 자주 쓰는 셸과 자동화 환경', '현재 workspace에서 명령 실행과 파일 확인에 사용됩니다.', 'Terminal Tools'),
+  makeToolTerm('GitHub', '깃허브', 'Git 저장소를 원격으로 관리하는 서비스', 'push된 코드를 Vercel이나 Cloudflare Pages가 배포할 수 있습니다.', 'Hosting Tools'),
+  makeToolTerm('Vercel', '버셀', '프론트엔드 정적 앱 배포 플랫폼', 'GitHub push를 감지해 Vite 앱을 자동 배포합니다.', 'Hosting Tools'),
+  makeToolTerm('Cloudflare Pages', '클라우드플레어 페이지스', '정적 웹앱 배포 플랫폼', 'dist 산출물을 전 세계 CDN에서 제공할 수 있습니다.', 'Hosting Tools'),
+  makeToolTerm('Service Worker API', '서비스 워커 에이피아이', '브라우저에서 캐시와 오프라인 동작을 제어하는 API', 'PWA 설치성과 오프라인 앱 shell에 관여합니다.', 'Browser APIs'),
+] satisfies RawDevTerm[]
+
+const joovisArchitectureTerms = [
+  makeJoovisTerm('LOCK', '락', '변경 가능 범위를 잠그는 JOOVIS식 보호 개념', '건드리면 안 되는 상태나 파일 경계를 명확히 표시합니다.', 'Boundary'),
+  makeJoovisTerm('WBS', '더블유비에스', '작업을 작은 단위로 나누는 구조화 목록', '큰 목표를 검증 가능한 작업 단위로 쪼개는 기준입니다.', 'Planning'),
+  makeJoovisTerm('Relay', '릴레이', '한 단계의 판단이나 산출물을 다음 단계로 넘기는 연결 방식', '작업 흐름에서 맥락과 결과가 끊기지 않게 전달합니다.', 'Flow'),
+  makeJoovisTerm('Current Truth', '커런트 트루스', '현재 시점에서 기준으로 삼는 최신 정리 상태', '오래된 가정보다 지금 확인된 사실을 우선합니다.', 'Truth Surface'),
+  makeJoovisTerm('Data Block', '데이터 블록', '의미 단위로 묶은 독립 데이터 조각', '검색, 검증, 인용을 쉽게 하도록 정보를 블록화합니다.', 'Data Structure'),
+  makeJoovisTerm('Dynamic Knowledge Surface', '다이내믹 날리지 서피스', '상황에 따라 갱신되는 지식 표시 면', '정적인 문서가 아니라 현재 판단 가능한 지식면으로 봅니다.', 'Knowledge'),
+  makeJoovisTerm('Agent Foundry', '에이전트 파운드리', '목적별 에이전트 역할을 설계하고 찍어내는 작업장 개념', '반복 작업을 역할 단위로 분리해 재사용합니다.', 'Agent Design'),
+  makeJoovisTerm('Replay', '리플레이', '과거 실행이나 판단 흐름을 다시 재생해 보는 것', '왜 그런 결과가 나왔는지 되짚는 검증 방식입니다.', 'Review'),
+  makeJoovisTerm('Autopsy', '오톱시', '실패한 흐름을 사후 분석하는 절차', '문제가 생긴 원인을 감정 없이 구조적으로 분해합니다.', 'Review'),
+  makeJoovisTerm('Boundary Ledger', '바운더리 레저', '허용 경계와 금지 경계를 기록하는 목록', 'AI나 사람이 어디까지 작업했는지 추적합니다.', 'Boundary'),
+  makeJoovisTerm('Truth Packet', '트루스 패킷', '현재 사실, 출처, 판단을 함께 묶은 전달 단위', '다음 작업자가 같은 기준으로 이어갈 수 있게 합니다.', 'Truth Surface'),
+  makeJoovisTerm('Command Surface', '커맨드 서피스', '사용자가 AI에게 명령을 주고 결과를 받는 접점', '프롬프트와 피드백이 만나는 작업면입니다.', 'AI Command'),
+  makeJoovisTerm('Review Cockpit', '리뷰 콕핏', '검토 대상, 상태, 다음 행동을 한 화면에서 보는 공간', '긴 흐름을 조작 가능한 검토 화면으로 바꿉니다.', 'Review'),
+  makeJoovisTerm('State Capsule', '스테이트 캡슐', '현재 상태를 나중에 복원할 수 있게 묶은 요약', '작업 중단 후 다시 시작할 때 기준점이 됩니다.', 'State'),
+  makeJoovisTerm('Handoff Packet', '핸드오프 패킷', '다음 작업에 필요한 상태와 검증 결과 묶음', '보고서보다 실행 가능한 인계 단위에 가깝습니다.', 'Change Control'),
+] satisfies RawDevTerm[]
+
+const disputeSeedTerms = [
+  ['원본대조', '원본과 파생본의 내용이 같은지 확인하는 절차', '원본 자료와 인용·요약본을 나란히 확인합니다.', '원본/출처', 'basic'],
+  ['직접인용', '원문 표현을 그대로 따옴표 안에 옮기는 방식', '문장을 바꾸지 않고 필요한 부분만 그대로 씁니다.', '인용안전', 'basic'],
+  ['간접인용', '원문의 뜻을 자기 문장으로 바꾸어 전달하는 방식', '원뜻을 유지하되 표현은 새로 씁니다.', '인용안전', 'basic'],
+  ['요약오염', '요약 과정에서 원문의 의미가 달라지는 문제', '줄이다가 뜻이 바뀌는 위험입니다.', '인용안전', 'intermediate'],
+  ['증거목록', '자료의 제목, 출처, 상태, 연결 쟁점을 정리한 목록', '증거를 찾고 제출 흐름을 관리하는 표입니다.', '증거관리', 'basic'],
+  ['쟁점', '다투거나 판단해야 하는 핵심 질문', '무엇을 판단해야 하는지 정리한 질문입니다.', '쟁점정리', 'basic'],
+  ['주장', '한쪽이 사실 또는 권리관계에 대해 내세우는 말', '입증하거나 반박해야 하는 핵심 문장입니다.', '쟁점정리', 'basic'],
+  ['반박', '상대 주장이나 해석에 맞서는 설명', '왜 그 주장이 부족하거나 틀렸는지 밝힙니다.', '쟁점정리', 'basic'],
+  ['입증', '주장을 자료와 논리로 증명하는 것', '주장을 뒷받침하는 자료 연결입니다.', '쟁점정리', 'basic'],
+  ['소명', '엄격한 증명 전 단계에서 그럴 가능성을 설명하는 것', '충분한 개연성을 보여 주는 설명입니다.', '쟁점정리', 'intermediate'],
+  ['타임라인', '사건이나 문서 흐름을 시간 순서로 정리한 목록', '언제 무엇이 있었는지 순서대로 봅니다.', '기록정리', 'basic'],
+  ['기관별 판단', '기관마다 내린 판단을 분리해 비교하는 방식', '판단 주체별 결론과 이유를 따로 봅니다.', '판단정리', 'intermediate'],
+  ['판단 괴리', '같은 자료나 사안에 대해 판단이 서로 달라지는 상태', '기관이나 단계별 결론 차이를 포착합니다.', '판단정리', 'advanced'],
+  ['출처추적', '자료가 어디서 왔고 어떻게 가공됐는지 따라가는 것', '출처와 이동 경로를 확인합니다.', '원본/출처', 'basic'],
+  ['인용안전등급', '자료를 직접 인용해도 되는지 표시하는 등급', '인용 가능성, 위험, 확인 필요를 구분합니다.', '인용안전', 'intermediate'],
+  ['민감정보', '공개되면 안 되는 개인·계정·식별 정보', '가리거나 분리해서 다뤄야 하는 정보입니다.', '프라이버시', 'basic'],
+  ['비식별화', '개인을 알아볼 수 없도록 정보를 제거하거나 바꾸는 처리', '이름, 주소, 번호 등을 가립니다.', '프라이버시', 'basic'],
+  ['append-only', '기존 기록을 덮어쓰지 않고 새 기록만 추가하는 방식', '변경 흔적을 보존하는 기록 원칙입니다.', '기록정리', 'intermediate'],
+  ['verification queue', '확인이 필요한 자료를 모아 둔 대기열', '수기검수나 원문대조가 필요한 항목 목록입니다.', '검수', 'basic'],
+  ['evidence item', '하나의 증거 자료 단위', '파일 하나나 문서 한 건을 독립 항목으로 봅니다.', '증거관리', 'basic'],
+  ['claim-issue link', '주장과 쟁점을 연결한 관계', '어떤 주장이 어떤 쟁점에 속하는지 표시합니다.', '쟁점정리', 'intermediate'],
+  ['OCR confidence', 'OCR 결과를 신뢰할 수 있는 정도', '문자 인식 결과의 확실성 점수입니다.', 'OCR/검수', 'intermediate'],
+  ['manual confirmation', '사람이 직접 확인했다는 표시', '자동 판독 결과를 수기로 검수합니다.', 'OCR/검수', 'basic'],
+  ['원본성', '자료가 원본 또는 원본에 가까운 상태인지의 성질', '가공되지 않은 자료인지 확인합니다.', '원본/출처', 'intermediate'],
+  ['증거능력', '자료가 절차상 증거로 쓰일 수 있는지의 성질', '제출 가능성과 절차 요건을 따져 봅니다.', '증거관리', 'advanced'],
+  ['증명력', '자료가 실제 판단에 얼마나 설득력을 갖는지의 정도', '증거로서 무게가 얼마나 있는지 봅니다.', '증거관리', 'advanced'],
+  ['제출본', '기관이나 상대방에게 제출하기 위해 정리한 버전', '원본과 구분되는 제출용 문서입니다.', '문서버전', 'basic'],
+  ['원본파일', '처음 확보한 변경 전 파일', '가공 전 기준 파일입니다.', '문서버전', 'basic'],
+  ['파생파일', '원본을 복사, 변환, 편집해 만든 파일', 'PDF 변환본, OCR본, 요약본 등이 포함됩니다.', '문서버전', 'basic'],
+  ['변경이력', '자료가 언제 어떻게 바뀌었는지의 기록', '수정과 가공 흔적을 추적합니다.', '기록정리', 'basic'],
+  ['메타데이터', '파일 생성일, 작성자, 형식 같은 부가 정보', '자료 자체 밖의 설명 정보입니다.', '원본/출처', 'basic'],
+  ['진술서', '사실관계나 입장을 문서로 진술한 자료', '사람의 설명을 정리한 문서입니다.', '문서유형', 'basic'],
+  ['사실확인서', '특정 사실을 확인하는 취지의 문서', '사실 여부를 별도로 정리한 확인 문서입니다.', '문서유형', 'basic'],
+  ['반박서', '상대 주장에 대한 반박을 정리한 문서', '쟁점별 반박과 근거를 묶습니다.', '문서유형', 'basic'],
+  ['보정명령', '기관이 부족한 부분을 고치거나 보완하라고 요구하는 명령', '빠진 자료나 형식을 보완하라는 절차 신호입니다.', '절차', 'intermediate'],
+  ['정보공개청구', '기관 보유 정보를 공개해 달라고 요청하는 절차', '자료 확보를 위한 공식 요청입니다.', '절차', 'intermediate'],
+  ['회신자료', '요청이나 청구에 대해 받은 답변 자료', '기관이나 상대가 보내온 응답 문서입니다.', '문서유형', 'basic'],
+  ['기록목록', '보유하거나 제출된 기록의 항목 목록', '자료 전체를 빠짐없이 확인하기 위한 목록입니다.', '기록정리', 'basic'],
+  ['녹취록', '녹음 내용을 글로 옮긴 문서', '음성 자료의 텍스트 버전입니다.', '문서유형', 'basic'],
+  ['녹음파일', '대화나 소리를 저장한 음성 파일', '원본성과 편집 여부 확인이 중요합니다.', '문서유형', 'basic'],
+  ['캡처자료', '화면을 이미지로 저장한 자료', '원본 화면과 맥락 확인이 필요합니다.', '문서유형', 'basic'],
+  ['파일해시', '파일 내용을 대표하는 고유한 계산값', '파일이 바뀌었는지 확인하는 지문입니다.', '원본/출처', 'intermediate'],
+  ['중복파일', '내용이 같거나 거의 같은 파일', '증거목록에서 중복 제출을 줄이기 위해 표시합니다.', '기록정리', 'basic'],
+  ['쟁점태그', '자료를 쟁점별로 분류하는 태그', '증거와 쟁점을 빠르게 연결합니다.', '쟁점정리', 'basic'],
+  ['절차단계', '현재 문서나 사건이 놓인 진행 단계', '제출 전, 검토 중, 보정 중처럼 구분합니다.', '절차', 'basic'],
+  ['기관명칭', '판단하거나 회신한 기관의 이름 정보', '실제 표기와 약칭을 구분해 기록합니다.', '판단정리', 'basic'],
+  ['판단근거', '결론을 뒷받침한 이유나 자료', '왜 그런 판단이 나왔는지의 기반입니다.', '판단정리', 'intermediate'],
+  ['사실인정', '기관이나 문서가 사실로 본 내용', '무엇을 사실로 받아들였는지 구분합니다.', '판단정리', 'intermediate'],
+  ['법률판단', '사실을 규범이나 법리에 적용해 내린 판단', '사실과 법적 결론을 분리합니다.', '판단정리', 'advanced'],
+  ['결론부', '문서의 최종 결론이 담긴 부분', '핵심 결과가 적힌 위치입니다.', '문서구조', 'basic'],
+  ['주문', '결정이나 판정의 최종 명령 부분', '결론을 공식 문구로 적은 부분입니다.', '문서구조', 'intermediate'],
+  ['이유', '결론에 이른 근거와 설명 부분', '왜 그런 결론인지 설명하는 부분입니다.', '문서구조', 'basic'],
+  ['누락자료', '있어야 하지만 목록이나 제출본에서 빠진 자료', '보완하거나 확인해야 할 빈칸입니다.', '검수', 'basic'],
+  ['확인필요', '자동 판단만으로 확정할 수 없어 사람이 봐야 하는 상태', '아직 결론 내리면 안 되는 표시입니다.', '검수', 'basic'],
+  ['인용금지', '그대로 인용하면 위험하거나 부정확한 상태', '원본대조 전에는 쓰지 말아야 한다는 표시입니다.', '인용안전', 'basic'],
+  ['직접인용 가능', '원문과 대조되어 그대로 인용할 수 있는 상태', '문장 변경 없이 인용해도 되는 표시입니다.', '인용안전', 'basic'],
+  ['수기검수', '사람이 직접 읽고 확인하는 검수', '자동 처리 결과를 사람이 확정합니다.', 'OCR/검수', 'basic'],
+  ['OCR 오류', '문자인식 과정에서 글자가 잘못 읽힌 문제', '원문 이미지와 대조해야 하는 오류입니다.', 'OCR/검수', 'basic'],
+  ['원문대조 필요', '요약이나 OCR 결과를 원문과 다시 비교해야 하는 상태', '그대로 믿기 전에 원문 확인이 필요합니다.', '검수', 'basic'],
+  ['증거-주장 연결', '증거 자료가 어떤 주장에 쓰이는지 연결하는 것', '자료가 주장과 따로 놀지 않게 묶습니다.', '쟁점정리', 'intermediate'],
+  ['인용문맥', '인용한 문장이 놓인 앞뒤 의미 관계', '문장만 떼어내 오해가 생기지 않게 확인합니다.', '인용안전', 'intermediate'],
+  ['자료봉인', '확정된 자료를 더 이상 수정하지 않도록 묶는 처리', '제출본이나 원본을 보존 상태로 둡니다.', '원본/출처', 'advanced'],
+  ['접근권한', '자료를 볼 수 있는 사람과 범위', '민감한 자료의 열람 범위를 제한합니다.', '프라이버시', 'intermediate'],
+  ['검토메모', '자료를 읽으며 남기는 검토용 메모', '증거 자체와 의견을 구분해 기록합니다.', '기록정리', 'basic'],
+] as const
+
+const disputeTerms = disputeSeedTerms.map(([term, koreanMeaning, simpleMeaning, category, difficulty], index) =>
+  makeDisputeTerm({
+    id: `dispute-${String(index + 1).padStart(2, '0')}`,
+    term,
+    pronunciation: term,
+    koreanMeaning,
+    simpleMeaning,
+    category,
+    difficulty: difficulty as Difficulty,
+  }),
+)
+
+const addedTerms = [
+  ...aiCommandTerms,
+  ...librariesToolTerms,
+  ...joovisArchitectureTerms,
+  ...disputeTerms,
+] satisfies RawDevTerm[]
+
+const buildResult = buildDataset(legacyTerms, addedTerms)
+
+export const devTerms = buildResult.terms
+export const datasetStats = buildResult.stats
+
+function makeAiTerm(term: Omit<RawDevTerm, 'id' | 'deck' | 'domainLabel' | 'joovisUsage' | 'checkQuestion' | 'codexPromptExample' | 'gptPromptExample'>): RawDevTerm {
+  return {
+    id: `ai-${slugify(term.term)}`,
+    deck: 'ai-command',
+    domainLabel: 'AI 지휘',
+    pronunciation: term.pronunciation,
+    term: term.term,
+    koreanMeaning: term.koreanMeaning,
+    simpleMeaning: term.simpleMeaning,
+    category: term.category,
+    difficulty: term.difficulty,
+    joovisUsage: `AI에게 ${term.koreanMeaning}을 명확히 지시할 때 쓰는 표현입니다.`,
+    checkQuestion: `${term.term}을 쓸 때 무엇을 더 분명히 해야 하나요?`,
+    gptPromptExample: term.goodExpression,
+    codexPromptExample: term.goodExpression,
+    badExpression: term.badExpression,
+    goodExpression: term.goodExpression,
+    relatedTerms: term.relatedTerms,
+  }
+}
+
+function makeToolTerm(
+  term: string,
+  pronunciation: string,
+  koreanMeaning: string,
+  simpleMeaning: string,
+  category: string,
+): RawDevTerm {
+  return {
+    id: `tool-${slugify(term)}`,
+    term,
+    pronunciation,
+    koreanMeaning,
+    simpleMeaning,
+    category,
+    deck: 'libraries-tools',
+    domainLabel: '라이브러리/도구',
+    difficulty: 'basic',
+    joovisUsage: `${term}은 학습 앱이나 자동화 작업을 만들 때 실무 도구로 이해하면 좋습니다.`,
+    checkQuestion: `${term}은 어떤 역할의 도구인가요?`,
+    codexPromptExample: `${term} 관련 변경이 있다면 공식 역할, 현재 사용 위치, 빌드 영향만 분리해서 설명해줘.`,
+  }
+}
+
+function makeJoovisTerm(
+  term: string,
+  pronunciation: string,
+  koreanMeaning: string,
+  simpleMeaning: string,
+  category: string,
+): RawDevTerm {
+  return {
+    id: `joovis-${slugify(term)}`,
+    term,
+    pronunciation,
+    koreanMeaning,
+    simpleMeaning,
+    category,
+    deck: 'joovis-architecture',
+    domainLabel: 'JOOVIS',
+    difficulty: 'intermediate',
+    joovisUsage: `JOOVIS 아키텍처 언어에서 ${term}은 ${simpleMeaning}`,
+    checkQuestion: `${term}은 어떤 경계나 흐름을 분명하게 만들까요?`,
+    codexPromptExample: `${term} 관점으로 현재 상태, 변경 경계, 검증 필요 사항을 분리해줘.`,
+  }
+}
+
+function makeDisputeTerm(
+  term: Pick<RawDevTerm, 'id' | 'term' | 'pronunciation' | 'koreanMeaning' | 'simpleMeaning' | 'category'> & {
+    difficulty: Difficulty
+    relatedTerms?: string[]
+  },
+): RawDevTerm {
+  return {
+    ...term,
+    deck: 'dispute-integration',
+    domainLabel: '분쟁통합',
+    disputeUsage: `${term.term}은 자료를 주장, 쟁점, 출처, 인용 가능성과 분리해서 정리할 때 쓰는 일반 교육용 용어입니다.`,
+    checkQuestion: `${term.term}을 판단할 때 원본대조, 민감정보, 인용 가능 여부 중 무엇을 확인해야 하나요?`,
+    gptPromptExample: `이 자료에서 ${term.term} 관점으로 확인할 항목을 원본대조, 쟁점 연결, 민감정보, 인용안전으로 나눠줘.`,
+    codexPromptExample: `정적 학습 데이터 안에서 ${term.term} 설명이 일반적이고 개인정보 없는 표현인지 점검해줘.`,
+    badExpression: '이 증거 중요한 것 같아.',
+    goodExpression:
+      '이 자료가 어떤 주장과 연결되는지, 원본대조 필요 여부, 직접인용 가능 여부, 민감정보 포함 여부를 분리해서 판단해줘.',
+    evidenceCaution: '원본 확인 전에는 단정하거나 직접 인용하지 마세요.',
+    privacyWarning: '실명, 주소, 계정번호, 구체적 사건 사실은 학습 예시에 넣지 마세요.',
+    relatedTerms: term.relatedTerms ?? ['원본대조', '쟁점', '인용안전등급'],
+  }
+}
+
+function buildDataset(legacy: RawDevTerm[], additions: RawDevTerm[]) {
+  const termsByKey = new Map<string, DevTerm>()
+  const stats = {
+    totalTerms: 0,
+    added: 0,
+    updated: legacy.length,
+    skippedDuplicates: 0,
+    deckCounts: {
+      'ai-command': 0,
+      development: 0,
+      'libraries-tools': 0,
+      'joovis-architecture': 0,
+      'dispute-integration': 0,
+    } satisfies Record<DeckId, number>,
+  }
+
+  for (const term of legacy) {
+    const enriched = enrichTerm(term)
+    termsByKey.set(getDedupKey(enriched), enriched)
+  }
+
+  for (const term of additions) {
+    const enriched = enrichTerm(term)
+    const key = getDedupKey(enriched)
+    const existing = termsByKey.get(key)
+
+    if (!existing) {
+      termsByKey.set(key, enriched)
+      stats.added += 1
+      continue
+    }
+
+    const merged = mergeTerms(existing, enriched)
+    if (JSON.stringify(merged) === JSON.stringify(existing)) {
+      stats.skippedDuplicates += 1
+    } else {
+      termsByKey.set(key, merged)
+      stats.updated += 1
+    }
+  }
+
+  const terms = [...termsByKey.values()]
+  stats.totalTerms = terms.length
+  for (const term of terms) {
+    stats.deckCounts[term.deck] += 1
+  }
+
+  return { terms, stats }
+}
+
+function enrichTerm(term: RawDevTerm): DevTerm {
+  const deck = term.deck ?? inferDeck(term)
+  const domainLabel = term.domainLabel ?? getDomainLabel(deck)
+  const difficulty = term.difficulty ?? inferDifficulty(term)
+  const base: DevTerm = {
+    ...term,
+    deck,
+    domainLabel,
+    difficulty,
+    joovisUsage: term.joovisUsage,
+    codexPromptExample: term.codexPromptExample,
+  }
+
+  if (deck === 'ai-command') {
+    return {
+      ...base,
+      badExpression: base.badExpression ?? '이거 좀 봐줘.',
+      goodExpression:
+        base.goodExpression ??
+        '현재 상태, 변경 파일, 열린 경계, 금지 경계, 검증 결과, 다음 단계만 분리해서 판정해줘.',
+      gptPromptExample:
+        base.gptPromptExample ??
+        '모호한 표현을 줄이고 목표, 경계, 검증 기준을 분리해서 다시 써줘.',
+    }
+  }
+
+  return base
+}
+
+function inferDeck(term: RawDevTerm): DeckId {
+  if (term.category === 'AI Command') {
+    return 'ai-command'
+  }
+  if (term.category === 'JOOVIS-Specific') {
+    return 'joovis-architecture'
+  }
+  return 'development'
+}
+
+function inferDifficulty(term: RawDevTerm): Difficulty {
+  if (term.category === 'Data / Schema' || term.category === 'Architecture') {
+    return 'intermediate'
+  }
+  if (term.category === 'JOOVIS-Specific') {
+    return 'intermediate'
+  }
+  if (term.category === 'Runtime / Integration') {
+    return 'intermediate'
+  }
+  return 'basic'
+}
+
+function getDomainLabel(deck: DeckId) {
+  switch (deck) {
+    case 'ai-command':
+      return 'AI 지휘'
+    case 'development':
+      return '개발 기본'
+    case 'libraries-tools':
+      return '라이브러리/도구'
+    case 'joovis-architecture':
+      return 'JOOVIS'
+    case 'dispute-integration':
+      return '분쟁통합'
+  }
+}
+
+function mergeTerms(existing: DevTerm, incoming: DevTerm): DevTerm {
+  return {
+    ...existing,
+    ...Object.fromEntries(
+      Object.entries(incoming).filter(([, value]) => value !== undefined && value !== ''),
+    ),
+    id: existing.id,
+    term: existing.term,
+    deck: existing.deck,
+  }
+}
+
+function getDedupKey(term: DevTerm) {
+  return `${term.deck}:${normalizeTerm(term.term)}`
+}
+
+function normalizeTerm(term: string) {
+  return term.normalize('NFKC').toLocaleLowerCase('ko-KR').replace(/[^\p{L}\p{N}]+/gu, '')
+}
+
+function slugify(term: string) {
+  const slug = term
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug || normalizeTerm(term)
+}

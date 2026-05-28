@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react'
-import { devTerms } from './devTerms'
-import { categories, type Category, type DevTerm, type ReviewStatus } from './types'
+import { datasetStats, devTerms } from './devTerms'
+import {
+  deckDefinitions,
+  type DeckId,
+  type DevTerm,
+  type ReviewStatus,
+} from './types'
 import {
   loadFavoriteIds,
   loadOnboardingDismissed,
@@ -22,28 +27,18 @@ const modes: Array<{ id: Mode; label: string; description: string }> = [
 ]
 
 const guideItems = [
-  {
-    title: '오늘',
-    body: '하루 1개 용어를 봅니다.',
-  },
-  {
-    title: '랜덤',
-    body: '버튼을 눌러 새 용어를 연습합니다.',
-  },
-  {
-    title: '다시 보기',
-    body: '모르는 용어만 다시 봅니다.',
-  },
-  {
-    title: '전체 검색',
-    body: 'Codex 보고서에서 모르는 단어를 찾습니다.',
-  },
+  { title: '오늘', body: '하루 1개 용어를 봅니다.' },
+  { title: '랜덤', body: '버튼을 눌러 새 용어를 연습합니다.' },
+  { title: '다시 보기', body: '모르는 용어만 다시 봅니다.' },
+  { title: '전체 검색', body: 'Codex 보고서에서 모르는 단어를 찾습니다.' },
 ]
 
 function App() {
+  const [activeDeck, setActiveDeck] = useState<DeckId>('ai-command')
   const [activeMode, setActiveMode] = useState<Mode>('today')
   const [query, setQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All')
+  const [selectedCategory, setSelectedCategory] = useState<string>('All')
+  const [searchAllDecks, setSearchAllDecks] = useState(false)
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => loadFavoriteIds())
   const [reviewStatuses, setReviewStatuses] = useState<Record<string, ReviewStatus>>(() =>
     loadReviewStatuses(),
@@ -51,34 +46,58 @@ function App() {
   const [expandedTermId, setExpandedTermId] = useState<string | null>(null)
   const [isGuideOpen, setIsGuideOpen] = useState(() => !loadOnboardingDismissed())
   const todayDateKey = useMemo(() => getDateKey(new Date()), [])
-  const [randomPracticeCount, setRandomPracticeCount] = useState(() =>
-    loadRandomPracticeCount(todayDateKey),
+  const [randomTermIds, setRandomTermIds] = useState<Partial<Record<DeckId, string>>>({})
+  const [randomPracticeCounts, setRandomPracticeCounts] = useState<Record<DeckId, number>>(() =>
+    Object.fromEntries(
+      deckDefinitions.map((deck) => [
+        deck.id,
+        loadRandomPracticeCount(getRandomPracticeKey(todayDateKey, deck.id)),
+      ]),
+    ) as Record<DeckId, number>,
   )
 
+  const activeDeckDefinition = deckDefinitions.find((deck) => deck.id === activeDeck)!
+  const activeDeckTerms = useMemo(
+    () => devTerms.filter((term) => term.deck === activeDeck),
+    [activeDeck],
+  )
+  const selectedDeckTotal = datasetStats.deckCounts[activeDeck]
   const todayTerm = useMemo(
-    () => devTerms[hashString(todayDateKey) % devTerms.length],
-    [todayDateKey],
+    () => activeDeckTerms[hashString(`${activeDeck}:${todayDateKey}`) % activeDeckTerms.length],
+    [activeDeck, activeDeckTerms, todayDateKey],
   )
-  const [randomTerm, setRandomTerm] = useState<DevTerm>(() =>
-    pickRandomTerm(null, `random-${todayDateKey}`),
-  )
+  const randomTerm = useMemo(() => {
+    const selectedId = randomTermIds[activeDeck]
+    return (
+      activeDeckTerms.find((term) => term.id === selectedId) ??
+      pickRandomTerm(activeDeckTerms, null, `random-${activeDeck}-${todayDateKey}`)
+    )
+  }, [activeDeck, activeDeckTerms, randomTermIds, todayDateKey])
 
-  const favoriteCount = favoriteIds.size
-  const knownCount = Object.values(reviewStatuses).filter((status) => status === 'known').length
-  const reviewAgainCount = Object.values(reviewStatuses).filter(
-    (status) => status === 'review_again',
+  const deckFavoriteCount = activeDeckTerms.filter((term) => favoriteIds.has(term.id)).length
+  const deckKnownCount = activeDeckTerms.filter(
+    (term) => reviewStatuses[term.id] === 'known',
+  ).length
+  const deckReviewAgainCount = activeDeckTerms.filter(
+    (term) => reviewStatuses[term.id] === 'review_again',
   ).length
 
   const reviewTerms = useMemo(
-    () => devTerms.filter((term) => reviewStatuses[term.id] === 'review_again'),
-    [reviewStatuses],
+    () => activeDeckTerms.filter((term) => reviewStatuses[term.id] === 'review_again'),
+    [activeDeckTerms, reviewStatuses],
   )
 
+  const searchSourceTerms = searchAllDecks ? devTerms : activeDeckTerms
+  const availableCategories = useMemo(
+    () => ['All', ...Array.from(new Set(searchSourceTerms.map((term) => term.category))).sort()],
+    [searchSourceTerms],
+  )
   const searchTerms = useMemo(() => {
     const normalizedQuery = normalizeText(query)
+    const category = availableCategories.includes(selectedCategory) ? selectedCategory : 'All'
 
-    return devTerms.filter((term) => {
-      const matchesCategory = selectedCategory === 'All' || term.category === selectedCategory
+    return searchSourceTerms.filter((term) => {
+      const matchesCategory = category === 'All' || term.category === category
       const searchableText = normalizeText(
         [
           term.term,
@@ -86,14 +105,28 @@ function App() {
           term.koreanMeaning,
           term.simpleMeaning,
           term.joovisUsage,
-          term.checkQuestion,
+          term.disputeUsage,
+          term.badExpression,
+          term.goodExpression,
+          term.gptPromptExample,
           term.codexPromptExample,
-        ].join(' '),
+          term.checkQuestion,
+          term.domainLabel,
+        ]
+          .filter(Boolean)
+          .join(' '),
       )
 
       return matchesCategory && searchableText.includes(normalizedQuery)
     })
-  }, [query, selectedCategory])
+  }, [availableCategories, query, searchSourceTerms, selectedCategory])
+
+  const selectDeck = (deckId: DeckId) => {
+    setActiveDeck(deckId)
+    setSelectedCategory('All')
+    setExpandedTermId(null)
+    setQuery('')
+  }
 
   const toggleFavorite = (termId: string) => {
     setFavoriteIds((current) => {
@@ -122,11 +155,12 @@ function App() {
   }
 
   const showNextRandomTerm = () => {
-    setRandomTerm((current) => pickRandomTerm(current.id))
-    setRandomPracticeCount((current) => {
-      const next = current + 1
-      saveRandomPracticeCount(todayDateKey, next)
-      return next
+    const nextTerm = pickRandomTerm(activeDeckTerms, randomTerm.id)
+    setRandomTermIds((current) => ({ ...current, [activeDeck]: nextTerm.id }))
+    setRandomPracticeCounts((current) => {
+      const nextCount = current[activeDeck] + 1
+      saveRandomPracticeCount(getRandomPracticeKey(todayDateKey, activeDeck), nextCount)
+      return { ...current, [activeDeck]: nextCount }
     })
   }
 
@@ -139,13 +173,35 @@ function App() {
     <main className="app-shell">
       <header className="app-header">
         <div>
-          <p className="eyebrow">Static PWA · LocalStorage only</p>
+          <p className="eyebrow">Multi-deck PWA · LocalStorage only</p>
           <h1>JOOVIS Terms Cockpit</h1>
         </div>
         <button type="button" className="help-button" onClick={() => setIsGuideOpen(true)}>
           사용법
         </button>
       </header>
+
+      <nav className="deck-nav" aria-label="학습 Deck 선택">
+        {deckDefinitions.map((deck) => (
+          <button
+            key={deck.id}
+            type="button"
+            className={`deck-button ${activeDeck === deck.id ? 'active' : ''}`}
+            aria-pressed={activeDeck === deck.id}
+            onClick={() => selectDeck(deck.id)}
+          >
+            {deck.label}
+          </button>
+        ))}
+      </nav>
+
+      <section className={`deck-intro deck-${activeDeck}`}>
+        <div>
+          <p className="eyebrow">{activeDeckDefinition.label}</p>
+          <h2>{activeDeckDefinition.title}</h2>
+          <p>{activeDeckDefinition.helperText}</p>
+        </div>
+      </section>
 
       <nav className="mode-nav" aria-label="학습 모드">
         {modes.map((mode) => (
@@ -162,15 +218,15 @@ function App() {
         ))}
       </nav>
 
-      <section className="stats-row" aria-label="학습 현황">
-        <span>전체 {devTerms.length}</span>
-        <span>중요 {favoriteCount}</span>
-        <span>알고 있음 {knownCount}</span>
-        <span>다시 보기 {reviewAgainCount}</span>
+      <section className="stats-row" aria-label="선택 Deck 학습 현황">
+        <span>전체 {selectedDeckTotal}</span>
+        <span>중요 {deckFavoriteCount}</span>
+        <span>알고 있음 {deckKnownCount}</span>
+        <span>다시 보기 {deckReviewAgainCount}</span>
       </section>
 
       {activeMode === 'today' && (
-        <ModePanel title="오늘의 용어" subtitle="날짜 기준으로 하루 1개 고정됩니다.">
+        <ModePanel title="오늘의 용어" subtitle="선택한 Deck 안에서 날짜 기준으로 하루 1개 고정됩니다.">
           <StudyCard
             term={todayTerm}
             isFavorite={favoriteIds.has(todayTerm.id)}
@@ -182,9 +238,9 @@ function App() {
       )}
 
       {activeMode === 'random' && (
-        <ModePanel title="랜덤 연습" subtitle="버튼을 누르면 이 카드가 새 용어로 바뀝니다.">
+        <ModePanel title="랜덤 연습" subtitle="버튼을 누르면 이 Deck 안에서 새 용어로 바뀝니다.">
           <div className="random-controls">
-            <span>오늘 랜덤 연습: {randomPracticeCount}개</span>
+            <span>오늘 랜덤 연습: {randomPracticeCounts[activeDeck]}개</span>
             <button type="button" className="primary-action" onClick={showNextRandomTerm}>
               다음 랜덤 용어
             </button>
@@ -200,7 +256,7 @@ function App() {
       )}
 
       {activeMode === 'review' && (
-        <ModePanel title="다시 보기" subtitle="모르는 용어만 모아서 복습합니다.">
+        <ModePanel title="다시 보기" subtitle="선택한 Deck에서 모르는 용어만 모아서 복습합니다.">
           {reviewTerms.length === 0 ? (
             <div className="empty-state-card">
               <p>다시 볼 용어가 없습니다. 랜덤 연습에서 모르는 용어를 '다시 보기'로 표시하세요.</p>
@@ -226,37 +282,49 @@ function App() {
       )}
 
       {activeMode === 'search' && (
-        <ModePanel title="전체 검색" subtitle="Codex 보고서에서 모르는 단어를 빠르게 찾습니다.">
+        <ModePanel
+          title="전체 검색"
+          subtitle={
+            searchAllDecks
+              ? '모든 Deck에서 용어를 찾습니다.'
+              : '선택한 Deck 안에서 용어를 찾습니다.'
+          }
+        >
           <section className="search-panel" aria-label="용어 검색">
             <label className="search-label" htmlFor="term-search">
-              영어, 발음, 한국어 뜻, 사용 예, 프롬프트 예시로 검색
+              용어, 뜻, 사용 예, 표현 예시, 프롬프트 예시로 검색
             </label>
             <input
               id="term-search"
               className="search-input"
               type="search"
               value={query}
-              placeholder="예: schema, 리뷰, fail-closed..."
+              placeholder="예: 원본대조, schema, prompt..."
               onChange={(event) => setQuery(event.target.value)}
             />
 
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={searchAllDecks}
+                onChange={(event) => {
+                  setSearchAllDecks(event.target.checked)
+                  setSelectedCategory('All')
+                }}
+              />
+              전체 Deck 검색
+            </label>
+
             <div className="filter-label">분야 선택</div>
             <div className="chips" aria-label="분야 선택">
-              <button
-                type="button"
-                className={`chip ${selectedCategory === 'All' ? 'active' : ''}`}
-                onClick={() => setSelectedCategory('All')}
-              >
-                전체 분야
-              </button>
-              {categories.map((category) => (
+              {availableCategories.map((category) => (
                 <button
                   type="button"
                   className={`chip ${selectedCategory === category ? 'active' : ''}`}
                   key={category}
                   onClick={() => setSelectedCategory(category)}
                 >
-                  {category}
+                  {category === 'All' ? '전체 분야' : category}
                 </button>
               ))}
             </div>
@@ -332,6 +400,9 @@ function GuideDialog({ onClose }: GuideDialogProps) {
           </button>
         </div>
 
+        <p className="guide-summary">
+          먼저 Deck을 고르고, 그 안에서 오늘·랜덤·다시 보기·전체 검색 모드를 사용합니다.
+        </p>
         <div className="guide-list">
           {guideItems.map((item, index) => (
             <article key={item.title} className="guide-item">
@@ -368,9 +439,13 @@ function StudyCard({
   onUpdateReviewStatus,
 }: TermActionProps) {
   return (
-    <article className="study-card">
+    <article className={`study-card deck-${term.deck}`}>
       <div className="card-meta-row">
-        <span className="category-badge">{term.category}</span>
+        <div className="badge-group">
+          <span className="category-badge">{term.domainLabel}</span>
+          <span className="category-badge">{term.category}</span>
+          <span className="category-badge">{getDifficultyLabel(term.difficulty)}</span>
+        </div>
         <StatusBadges isFavorite={isFavorite} reviewStatus={reviewStatus} />
       </div>
 
@@ -382,13 +457,15 @@ function StudyCard({
       <p className="korean-meaning">{term.koreanMeaning}</p>
       <p className="simple-meaning">{term.simpleMeaning}</p>
 
-      <DetailBlock label="JOOVIS 사용 예" tone="usage">
-        {term.joovisUsage}
+      <DetailBlock label={getUsageLabel(term)} tone="usage">
+        {getUsageText(term)}
       </DetailBlock>
       <DetailBlock label="확인 질문" tone="question">
         {term.checkQuestion}
       </DetailBlock>
-      <PromptBlock prompt={term.codexPromptExample} />
+      <ExpressionBlock term={term} />
+      <PromptBlock term={term} />
+      <CautionBlock term={term} />
 
       <TermActions
         term={term}
@@ -416,10 +493,13 @@ function CompactTermCard({
   onUpdateReviewStatus,
 }: CompactTermCardProps) {
   return (
-    <article className={`compact-card ${isExpanded ? 'expanded' : ''}`}>
+    <article className={`compact-card ${isExpanded ? 'expanded' : ''} deck-${term.deck}`}>
       <div className="compact-main">
         <div>
-          <span className="category-badge">{term.category}</span>
+          <div className="badge-group">
+            <span className="category-badge">{term.domainLabel}</span>
+            <span className="category-badge">{term.category}</span>
+          </div>
           <h3>{term.term}</h3>
           <p className="compact-pronunciation">{term.pronunciation}</p>
           <p className="compact-meaning">{term.koreanMeaning}</p>
@@ -434,13 +514,15 @@ function CompactTermCard({
       {isExpanded && (
         <div className="compact-details">
           <p className="simple-meaning">{term.simpleMeaning}</p>
-          <DetailBlock label="JOOVIS 사용 예" tone="usage">
-            {term.joovisUsage}
+          <DetailBlock label={getUsageLabel(term)} tone="usage">
+            {getUsageText(term)}
           </DetailBlock>
           <DetailBlock label="확인 질문" tone="question">
             {term.checkQuestion}
           </DetailBlock>
-          <PromptBlock prompt={term.codexPromptExample} />
+          <ExpressionBlock term={term} />
+          <PromptBlock term={term} />
+          <CautionBlock term={term} />
           <TermActions
             term={term}
             isFavorite={isFavorite}
@@ -475,7 +557,7 @@ function StatusBadges({ isFavorite, reviewStatus }: StatusBadgesProps) {
 
 type DetailBlockProps = {
   label: string
-  tone: 'usage' | 'question'
+  tone: 'usage' | 'question' | 'expression' | 'caution'
   children: string
 }
 
@@ -488,8 +570,34 @@ function DetailBlock({ label, tone, children }: DetailBlockProps) {
   )
 }
 
-function PromptBlock({ prompt }: { prompt: string }) {
+function ExpressionBlock({ term }: { term: DevTerm }) {
+  if (!term.badExpression && !term.goodExpression) {
+    return null
+  }
+
+  return (
+    <div className="expression-grid">
+      {term.badExpression && (
+        <DetailBlock label="나쁜 표현" tone="expression">
+          {term.badExpression}
+        </DetailBlock>
+      )}
+      {term.goodExpression && (
+        <DetailBlock label="좋은 표현" tone="expression">
+          {term.goodExpression}
+        </DetailBlock>
+      )}
+    </div>
+  )
+}
+
+function PromptBlock({ term }: { term: DevTerm }) {
+  const prompt = term.gptPromptExample ?? term.codexPromptExample
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+
+  if (!prompt) {
+    return null
+  }
 
   const copyPrompt = async () => {
     try {
@@ -508,7 +616,7 @@ function PromptBlock({ prompt }: { prompt: string }) {
   return (
     <div className="prompt-block">
       <div className="prompt-header">
-        <span>Codex 프롬프트 예시</span>
+        <span>{term.deck === 'dispute-integration' ? 'GPT 프롬프트 예시' : '프롬프트 예시'}</span>
         <button type="button" onClick={copyPrompt}>
           {copyState === 'copied'
             ? '복사됨'
@@ -518,6 +626,27 @@ function PromptBlock({ prompt }: { prompt: string }) {
         </button>
       </div>
       <p>{prompt}</p>
+    </div>
+  )
+}
+
+function CautionBlock({ term }: { term: DevTerm }) {
+  if (!term.evidenceCaution && !term.privacyWarning) {
+    return null
+  }
+
+  return (
+    <div className="caution-stack">
+      {term.evidenceCaution && (
+        <DetailBlock label="증거 주의" tone="caution">
+          {term.evidenceCaution}
+        </DetailBlock>
+      )}
+      {term.privacyWarning && (
+        <DetailBlock label="개인정보 주의" tone="caution">
+          {term.privacyWarning}
+        </DetailBlock>
+      )}
     </div>
   )
 }
@@ -559,20 +688,44 @@ function TermActions({
   )
 }
 
-function pickRandomTerm(currentId: string | null, seed?: string) {
-  if (devTerms.length < 2) {
-    return devTerms[0]
+function getUsageLabel(term: DevTerm) {
+  return term.deck === 'dispute-integration' ? '분쟁통합 사용 예' : '학습 사용 예'
+}
+
+function getUsageText(term: DevTerm) {
+  return term.deck === 'dispute-integration'
+    ? term.disputeUsage ?? term.joovisUsage ?? ''
+    : term.joovisUsage ?? term.disputeUsage ?? ''
+}
+
+function getDifficultyLabel(difficulty: DevTerm['difficulty']) {
+  if (difficulty === 'basic') {
+    return '기초'
+  }
+  if (difficulty === 'intermediate') {
+    return '중급'
+  }
+  return '고급'
+}
+
+function pickRandomTerm(terms: DevTerm[], currentId: string | null, seed?: string) {
+  if (terms.length < 2) {
+    return terms[0]
   }
 
   if (seed) {
-    return devTerms[hashString(seed) % devTerms.length]
+    return terms[hashString(seed) % terms.length]
   }
 
-  let nextTerm = devTerms[Math.floor(Math.random() * devTerms.length)]
+  let nextTerm = terms[Math.floor(Math.random() * terms.length)]
   while (nextTerm.id === currentId) {
-    nextTerm = devTerms[Math.floor(Math.random() * devTerms.length)]
+    nextTerm = terms[Math.floor(Math.random() * terms.length)]
   }
   return nextTerm
+}
+
+function getRandomPracticeKey(dateKey: string, deckId: DeckId) {
+  return `${dateKey}:${deckId}`
 }
 
 function getDateKey(date: Date) {

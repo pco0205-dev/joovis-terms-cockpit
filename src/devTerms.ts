@@ -1420,6 +1420,8 @@ const expertSeedTerms = [
   ['dispute-integration', 'Hash Verification', '해시 베리피케이션', '파일 해시를 다시 계산해 동일성을 확인하는 절차', '원본과 제출본이 같은지 검증하는 데 씁니다.', '원본/출처', 'intermediate', ['파일해시', '원본대조', 'Authentication']],
   ['dispute-integration', 'Confidentiality Designation', '컨피덴셜리티 디자인네이션', '자료의 공개 제한 수준을 표시하는 분류', '민감도와 공유 범위를 분리해서 관리합니다.', '프라이버시', 'advanced', ['민감정보', '접근권한', 'Privilege Review']],
   ['ai-command', 'Confidence', '컨피던스', '판단이나 답변을 얼마나 믿을 수 있는지의 확신도', '근거 수준과 검증 여부를 분리해서 말할 때 씁니다.', 'Review / QA', 'intermediate', ['Evidence Ladder', 'Grounding', 'Provenance']],
+  ['ai-command', 'Tradeoff', '트레이드오프', '하나를 얻기 위해 다른 비용이나 위험을 감수하는 선택 관계', '선택지를 비교할 때 속도, 안정성, 유지보수성 중 무엇을 우선하는지 드러냅니다.', 'AI Command', 'intermediate', ['Decision Record', 'Risk Gate', 'Review Lens']],
+  ['development', 'Change Control', '체인지 컨트롤', '변경 범위, 승인, 검증, 되돌림을 관리하는 절차', '코드나 시스템 변경이 의도한 범위 안에서 안전하게 이루어지게 합니다.', 'Git / Change Control', 'intermediate', ['Diff', 'Rollback', 'Validation']],
   ['development', 'ACID', '애시드', '트랜잭션 안정성을 설명하는 Atomicity, Consistency, Isolation, Durability 묶음', 'DB 변경이 안전하게 처리되는지 판단할 때 쓰는 핵심 약어입니다.', 'Data / Schema', 'advanced', ['Transaction', 'Atomicity', 'Consistency']],
   ['development', 'Action', '액션', '상태를 바꾸라고 전달하는 의도나 명령 객체', 'Reducer나 상태 머신에서 다음 상태를 결정하는 입력입니다.', 'Programming', 'basic', ['Reducer', 'State', 'Transition']],
   ['development', 'Async', '어싱크', '작업이 끝날 때까지 기다리지 않고 나중에 결과를 받는 실행 방식', '네트워크, 파일, 타이머처럼 시간이 걸리는 작업에서 중요합니다.', 'Runtime', 'intermediate', ['Event Loop', 'Queue', 'Concurrency']],
@@ -1478,12 +1480,136 @@ const expertTerms = expertSeedTerms.map(
     }),
 )
 
+const aiExpressionTerms = [
+  makeBilingualPromptTerm(
+    'Define the output contract',
+    '출력 형식과 필수 항목을 먼저 고정하라는 지시',
+    '답변이 흔들리지 않게 보고서 모양, 항목, 금지 문구를 정합니다.',
+    '좋게 정리해줘.',
+    '출력 형식, 필수 섹션, 금지할 표현, 검증 기준을 먼저 고정하고 그 형식 안에서 답해줘.\nEN: Define the output contract first, including required sections, forbidden claims, and validation criteria.',
+    ['Output Contract', 'Contract', 'Acceptance Criteria'],
+  ),
+  makeBilingualPromptTerm(
+    'Separate facts from inference',
+    '확인된 사실과 추정을 분리하라는 지시',
+    'AI가 확정과 추측을 섞지 않게 만드는 핵심 표현입니다.',
+    '뭐가 맞는지 말해줘.',
+    '확인된 사실, 합리적 추정, 확인 불가 항목을 표로 분리해서 말해줘.\nEN: Separate confirmed facts, reasonable inferences, and unknowns in separate sections.',
+    ['Evidence Ladder', 'Grounding', 'Confidence'],
+  ),
+  makeBilingualPromptTerm(
+    'Ask clarifying questions first',
+    '불명확하면 먼저 질문하라는 지시',
+    'AI가 빈칸을 추측으로 채우기 전에 필요한 정보를 묻게 합니다.',
+    '알아서 해줘.',
+    '요구사항이 모호하면 구현하지 말고 먼저 필요한 확인 질문만 해줘.\nEN: If the requirement is ambiguous, do not implement yet; ask the necessary clarifying questions first.',
+    ['Clarifying Question', 'Ambiguity Budget', 'Stop Condition'],
+  ),
+  makeBilingualPromptTerm(
+    'Inspect before editing',
+    '수정 전에 파일과 구조를 먼저 읽으라는 지시',
+    '코드베이스 패턴을 모르고 바로 고치는 실수를 줄입니다.',
+    '그냥 고쳐줘.',
+    '수정 전에 관련 파일, 기존 패턴, 영향 범위를 먼저 확인하고 그 다음 최소 변경으로 고쳐줘.\nEN: Inspect the relevant files, existing patterns, and blast radius before editing; then make the smallest safe change.',
+    ['Scope', 'Diff', 'Review Lens'],
+  ),
+  makeBilingualPromptTerm(
+    'Do not modify files yet',
+    '아직 파일을 바꾸지 말고 분석만 하라는 지시',
+    '검토 단계와 실행 단계를 분리해 위험한 변경을 막습니다.',
+    '일단 봐줘.',
+    '아직 파일은 수정하지 말고, 현재 상태와 가능한 선택지만 분석해서 보고해줘.\nEN: Do not modify files yet; analyze the current state and options only.',
+    ['Dry Run', 'Boundary', 'Side Effect'],
+  ),
+  makeBilingualPromptTerm(
+    'Stop on boundary uncertainty',
+    '경계가 불명확하면 멈추라는 지시',
+    '권한, 경로, 개인정보, 외부 시스템 위험을 넘지 않게 합니다.',
+    '필요하면 알아서 해.',
+    '작업 경계, 권한, 경로가 불명확하면 즉시 멈추고 BLOCKED로 보고해줘.\nEN: If scope, permissions, or paths are unclear, stop immediately and report BLOCKED.',
+    ['Boundary', 'Fail-closed', 'Escalation Criteria'],
+  ),
+  makeBilingualPromptTerm(
+    'Use a minimal patch',
+    '필요한 범위만 작게 수정하라는 지시',
+    '불필요한 리팩터링과 부작용을 줄입니다.',
+    '전체적으로 개선해줘.',
+    '요청 해결에 필요한 최소 파일과 최소 변경만 적용하고, 관련 없는 리팩터링은 하지 마.\nEN: Use a minimal patch that solves the request; avoid unrelated refactors.',
+    ['Scope', 'Diff', 'Regression'],
+  ),
+  makeBilingualPromptTerm(
+    'Verify against source of truth',
+    '기준 자료와 대조해 확인하라는 지시',
+    '기억이나 추정이 아니라 실제 파일, 로그, 문서를 기준으로 판단하게 합니다.',
+    '맞는지 확인해줘.',
+    '추정하지 말고 지정된 source of truth와 대조해서 맞는 것, 틀린 것, 확인 불가를 분리해줘.\nEN: Verify against the specified source of truth; separate correct, incorrect, and unverifiable items.',
+    ['Source of Truth', 'Grounding', 'Provenance'],
+  ),
+  makeBilingualPromptTerm(
+    'List risks before implementation',
+    '구현 전에 위험과 검증 포인트를 먼저 말하라는 지시',
+    '작업 전 실패 가능성을 보이게 만들어 검증 품질을 올립니다.',
+    '바로 만들어줘.',
+    '구현 전에 주요 위험, 건드릴 파일, 검증 방법을 먼저 짧게 정리한 뒤 진행해줘.\nEN: Before implementing, briefly list the main risks, files to touch, and validation plan.',
+    ['Risk Gate', 'Review Lens', 'Validation'],
+  ),
+  makeBilingualPromptTerm(
+    'Explain as a workflow',
+    '개념을 순서와 흐름으로 설명하라는 지시',
+    '단어 정의가 아니라 실제 작동 경로로 이해하게 합니다.',
+    '쉽게 설명해줘.',
+    '정의만 말하지 말고 입력 → 처리 → 상태 변화 → 실패 지점 → 검증 순서로 설명해줘.\nEN: Explain it as a workflow: input, processing, state change, failure point, and validation.',
+    ['Control Flow', 'State Machine', 'Failure Mode'],
+  ),
+  makeBilingualPromptTerm(
+    'Give Korean explanation and English command',
+    '한국어 설명과 영어 지시문을 함께 달라는 지시',
+    '한국어로 이해하고 영어 표현까지 바로 복사해 쓸 수 있게 합니다.',
+    '영어로도 알려줘.',
+    '먼저 한국어로 의미를 설명하고, 바로 쓸 수 있는 영어 지시문을 한 줄로 제공해줘.\nEN: Explain the meaning in Korean first, then provide one copy-ready English instruction.',
+    ['Prompt', 'Instruction', 'Output Contract'],
+  ),
+  makeBilingualPromptTerm(
+    'Review only actionable findings',
+    '실제로 고쳐야 할 문제만 리뷰하라는 지시',
+    '취향이나 잡담보다 버그, 위험, 테스트 누락에 집중시킵니다.',
+    '리뷰해줘.',
+    '실제 버그, 회귀 위험, 누락된 검증만 심각도 순으로 보고하고, 취향성 의견은 뒤로 빼줘.\nEN: Report only actionable bugs, regression risks, and missing validation, ordered by severity.',
+    ['Finding', 'Severity', 'Regression'],
+  ),
+  makeBilingualPromptTerm(
+    'Show the decision tradeoff',
+    '선택지의 장단점을 비교하라는 지시',
+    '한 답만 밀지 않고 왜 그 선택이 나은지 판단 근거를 남깁니다.',
+    '뭐가 나아?',
+    '가능한 선택지 2~3개를 비교하고, 비용, 위험, 유지보수성 기준으로 추천안을 골라줘.\nEN: Compare 2-3 options and recommend one based on cost, risk, and maintainability.',
+    ['Decision Record', 'Tradeoff', 'Review Lens'],
+  ),
+  makeBilingualPromptTerm(
+    'Preserve user changes',
+    '사용자 변경을 되돌리지 말라는 지시',
+    '협업 중 다른 변경사항을 실수로 덮어쓰지 않게 합니다.',
+    '필요하면 정리해.',
+    '내가 만든 변경은 되돌리지 말고, 요청과 관련된 부분만 조심해서 수정해줘.\nEN: Preserve user changes; only edit the parts necessary for this request.',
+    ['Diff', 'Rollback', 'Change Control'],
+  ),
+  makeBilingualPromptTerm(
+    'Return a concise final report',
+    '마지막 보고를 짧고 구조적으로 하라는 지시',
+    '긴 설명 대신 변경, 검증, 남은 위험을 바로 파악하게 합니다.',
+    '끝나면 알려줘.',
+    '완료 후 변경 파일, 구현 내용, 검증 결과, 남은 위험만 짧게 보고해줘.\nEN: In the final report, include only changed files, implemented behavior, validation results, and remaining risks.',
+    ['Handoff', 'Acceptance Criteria', 'Validation'],
+  ),
+] satisfies RawDevTerm[]
+
 const addedTerms = [
   ...aiCommandTerms,
   ...librariesToolTerms,
   ...joovisArchitectureTerms,
   ...disputeTerms,
   ...expertTerms,
+  ...aiExpressionTerms,
 ] satisfies RawDevTerm[]
 
 const buildResult = buildDataset(legacyTerms, addedTerms)
@@ -1623,6 +1749,49 @@ function makeExpertTerm(
         : term.deck === 'dispute-integration'
           ? `${term.term} 관점에서 원본대조 필요 여부, 연결되는 쟁점, 인용 가능성, 민감정보 포함 여부를 분리해서 판단해줘.`
           : undefined,
+  }
+}
+
+function makeBilingualPromptTerm(
+  term: string,
+  koreanMeaning: string,
+  simpleMeaning: string,
+  badExpression: string,
+  goodExpression: string,
+  relatedTerms: string[],
+): RawDevTerm {
+  return {
+    id: `ai-expression-${slugify(term)}`,
+    term,
+    pronunciation: term,
+    koreanMeaning,
+    simpleMeaning,
+    category: 'AI Command',
+    deck: 'ai-command',
+    domainLabel: 'AI 지휘',
+    difficulty: 'intermediate',
+    badExpression,
+    goodExpression,
+    gptPromptExample: goodExpression.split('\nEN: ')[1] ?? goodExpression,
+    codexPromptExample: goodExpression.split('\nEN: ')[0],
+    joovisUsage: `${term}은 한국어로 이해하고 영어 지시문으로도 바로 옮겨 쓸 수 있게 만든 AI 지휘 표현입니다.`,
+    checkQuestion: `${term}을 쓸 때 어떤 기준, 경계, 출력 형식을 함께 말해야 하나요?`,
+    mentalModel: `${term}은 AI에게 건네는 작업 주문서의 핵심 문장입니다. 한국어 문장은 내가 의도를 이해하는 쪽이고, 영어 문장은 실제 명령으로 복사해 쓰는 쪽입니다.`,
+    whyItMatters:
+      '한국어로만 대충 말하면 의도는 편하지만 출력 기준이 흐려질 수 있고, 영어 표현을 같이 익히면 Codex/GPT에게 더 짧고 정확하게 요구할 수 있습니다.',
+    withoutIt:
+      '이 표현을 모르면 "봐줘", "고쳐줘", "알아서 해줘"처럼 넓은 요청을 반복하게 됩니다. 그러면 AI가 경계, 검증, 출력 형식을 추측하게 됩니다.',
+    realWorkflow:
+      '먼저 한국어 좋은 표현으로 요구사항을 정리하고, 필요하면 EN 문장을 복사해 프롬프트 첫 줄이나 마지막 검증 지시로 붙입니다.',
+    mechanism:
+      '좋은 AI 지시는 목표, 금지 경계, 판단 기준, 출력 형식을 동시에 잠급니다. 이 표현들은 그 네 가지를 짧은 문장으로 묶는 역할을 합니다.',
+    usagePattern:
+      'Codex에게 작업을 맡기기 전, 또는 리뷰 결과를 요구할 때 문장 앞에 붙이면 좋습니다. 특히 파일 수정 전 분석, 경계 확인, 검증 보고에 효과적입니다.',
+    commonPitfall:
+      '영어 표현을 외우는 것보다 언제 쓰는지가 중요합니다. 분석만 원할 때, 수정까지 원할 때, 검증 보고가 필요할 때를 분리해야 합니다.',
+    expertNote:
+      `${term}은 실제 명령 품질을 올리는 표현이므로 ${relatedTerms.slice(0, 3).join(', ')}와 함께 연습하면 좋습니다.`,
+    relatedTerms,
   }
 }
 

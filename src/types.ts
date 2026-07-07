@@ -37,6 +37,13 @@ export type Difficulty = 'basic' | 'intermediate' | 'advanced'
 
 export type ReviewStatus = 'known' | 'review_again'
 
+export type ReviewSchedule = {
+  nextReviewDate: string
+  intervalDays: number
+  repetitions: number
+  lastReviewedDate: string
+}
+
 export type DevTerm = {
   id: string
   term: string

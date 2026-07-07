@@ -4,6 +4,7 @@ import {
   deckDefinitions,
   type DeckId,
   type DevTerm,
+  type ReviewSchedule,
   type ReviewStatus,
 } from './types'
 import {
@@ -11,15 +12,19 @@ import {
   loadOnboardingDismissed,
   loadRandomPracticeCount,
   loadRandomPracticeHistory,
+  loadReviewSchedules,
   loadReviewStatuses,
+  loadTermMemos,
   saveFavoriteIds,
   saveOnboardingDismissed,
   saveRandomPracticeCount,
   saveRandomPracticeHistory,
+  saveReviewSchedules,
   saveReviewStatuses,
+  saveTermMemos,
 } from './storage'
 
-type Mode = 'today' | 'random' | 'review' | 'search'
+type Mode = 'today' | 'random' | 'review' | 'search' | 'interpret'
 type ViewState = { deck: DeckId; mode: Mode }
 
 const modes: Array<{ id: Mode; label: string; description: string }> = [
@@ -27,6 +32,7 @@ const modes: Array<{ id: Mode; label: string; description: string }> = [
   { id: 'random', label: '랜덤', description: '새 카드' },
   { id: 'review', label: '다시 보기', description: '모르는 것' },
   { id: 'search', label: '전체 검색', description: '찾아보기' },
+  { id: 'interpret', label: '보고서', description: '용어 해석' },
 ]
 
 const guideItems = [
@@ -34,6 +40,7 @@ const guideItems = [
   { title: '랜덤', body: '버튼을 눌러 새 용어를 연습합니다.' },
   { title: '다시 보기', body: '모르는 용어만 다시 봅니다.' },
   { title: '전체 검색', body: 'Codex 보고서에서 모르는 단어를 찾습니다.' },
+  { title: '보고서', body: '긴 문장을 붙여 넣고 앱의 용어와 표현을 찾아봅니다.' },
 ]
 
 function App() {
@@ -47,7 +54,12 @@ function App() {
   const [reviewStatuses, setReviewStatuses] = useState<Record<string, ReviewStatus>>(() =>
     loadReviewStatuses(),
   )
+  const [reviewSchedules, setReviewSchedules] = useState<Record<string, ReviewSchedule>>(() =>
+    loadReviewSchedules(),
+  )
+  const [termMemos, setTermMemos] = useState<Record<string, string>>(() => loadTermMemos())
   const [expandedTermId, setExpandedTermId] = useState<string | null>(null)
+  const [reportText, setReportText] = useState('')
   const [isGuideOpen, setIsGuideOpen] = useState(() => !loadOnboardingDismissed())
   const todayDateKey = useMemo(() => getDateKey(new Date()), [])
   const [randomTermIds, setRandomTermIds] = useState<Partial<Record<DeckId, string>>>({})
@@ -100,10 +112,17 @@ function App() {
   const deckReviewAgainCount = activeDeckTerms.filter(
     (term) => reviewStatuses[term.id] === 'review_again',
   ).length
+  const deckDueReviewCount = activeDeckTerms.filter((term) =>
+    isReviewDue(reviewSchedules[term.id], todayDateKey, reviewStatuses[term.id]),
+  ).length
+  const deckMemoCount = activeDeckTerms.filter((term) => termMemos[term.id]?.trim()).length
 
   const reviewTerms = useMemo(
-    () => activeDeckTerms.filter((term) => reviewStatuses[term.id] === 'review_again'),
-    [activeDeckTerms, reviewStatuses],
+    () =>
+      activeDeckTerms.filter((term) =>
+        isReviewDue(reviewSchedules[term.id], todayDateKey, reviewStatuses[term.id]),
+      ),
+    [activeDeckTerms, reviewSchedules, reviewStatuses, todayDateKey],
   )
 
   const searchSourceTerms = searchAllDecks ? devTerms : activeDeckTerms
@@ -139,6 +158,7 @@ function App() {
           term.commonPitfall,
           term.expertNote,
           term.relatedTerms?.join(' '),
+          termMemos[term.id],
           term.domainLabel,
         ]
           .filter(Boolean)
@@ -147,7 +167,11 @@ function App() {
 
       return matchesCategory && searchableText.includes(normalizedQuery)
     })
-  }, [availableCategories, query, searchSourceTerms, selectedCategory])
+  }, [availableCategories, query, searchSourceTerms, selectedCategory, termMemos])
+  const reportMatches = useMemo(
+    () => findReportMatches(reportText, searchAllDecks ? devTerms : activeDeckTerms),
+    [activeDeckTerms, reportText, searchAllDecks],
+  )
 
   const rememberCurrentView = () => {
     setViewHistory((current) => {
@@ -191,6 +215,35 @@ function App() {
     setQuery('')
   }
 
+  const openRelatedTerm = (relatedTerm: string, sourceDeck: DeckId) => {
+    const matchedTerm = findTermByName(relatedTerm, sourceDeck)
+    if (!matchedTerm) {
+      setQuery(relatedTerm)
+      selectMode('search')
+      return
+    }
+    rememberCurrentView()
+    setActiveDeck(matchedTerm.deck)
+    setActiveMode('search')
+    setSearchAllDecks(false)
+    setSelectedCategory('All')
+    setQuery(matchedTerm.term)
+    setExpandedTermId(matchedTerm.id)
+  }
+
+  const updateTermMemo = (termId: string, memo: string) => {
+    setTermMemos((current) => {
+      const next = { ...current }
+      if (memo.trim()) {
+        next[termId] = memo
+      } else {
+        delete next[termId]
+      }
+      saveTermMemos(next)
+      return next
+    })
+  }
+
   const toggleFavorite = (termId: string) => {
     setFavoriteIds((current) => {
       const next = new Set(current)
@@ -206,13 +259,16 @@ function App() {
 
   const updateReviewStatus = (termId: string, nextStatus: ReviewStatus) => {
     setReviewStatuses((current) => {
-      const next = { ...current }
-      if (next[termId] === nextStatus) {
-        delete next[termId]
-      } else {
-        next[termId] = nextStatus
-      }
+      const next = { ...current, [termId]: nextStatus }
       saveReviewStatuses(next)
+      return next
+    })
+    setReviewSchedules((current) => {
+      const next = {
+        ...current,
+        [termId]: buildNextReviewSchedule(current[termId], nextStatus, todayDateKey),
+      }
+      saveReviewSchedules(next)
       return next
     })
   }
@@ -311,6 +367,8 @@ function App() {
         <span>중요 {deckFavoriteCount}</span>
         <span>알고 있음 {deckKnownCount}</span>
         <span>다시 보기 {deckReviewAgainCount}</span>
+        <span>오늘 복습 {deckDueReviewCount}</span>
+        <span>메모 {deckMemoCount}</span>
       </section>
 
       {activeMode === 'today' && (
@@ -319,8 +377,12 @@ function App() {
             term={todayTerm}
             isFavorite={favoriteIds.has(todayTerm.id)}
             reviewStatus={reviewStatuses[todayTerm.id]}
+            reviewSchedule={reviewSchedules[todayTerm.id]}
+            memo={termMemos[todayTerm.id] ?? ''}
             onToggleFavorite={toggleFavorite}
             onUpdateReviewStatus={updateReviewStatus}
+            onUpdateMemo={updateTermMemo}
+            onOpenRelatedTerm={openRelatedTerm}
           />
         </ModePanel>
       )}
@@ -343,8 +405,12 @@ function App() {
             term={randomTerm}
             isFavorite={favoriteIds.has(randomTerm.id)}
             reviewStatus={reviewStatuses[randomTerm.id]}
+            reviewSchedule={reviewSchedules[randomTerm.id]}
+            memo={termMemos[randomTerm.id] ?? ''}
             onToggleFavorite={toggleFavorite}
             onUpdateReviewStatus={updateReviewStatus}
+            onUpdateMemo={updateTermMemo}
+            onOpenRelatedTerm={openRelatedTerm}
           />
         </ModePanel>
       )}
@@ -366,8 +432,12 @@ function App() {
                   term={term}
                   isFavorite={favoriteIds.has(term.id)}
                   reviewStatus={reviewStatuses[term.id]}
+                  reviewSchedule={reviewSchedules[term.id]}
+                  memo={termMemos[term.id] ?? ''}
                   onToggleFavorite={toggleFavorite}
                   onUpdateReviewStatus={updateReviewStatus}
+                  onUpdateMemo={updateTermMemo}
+                  onOpenRelatedTerm={openRelatedTerm}
                 />
               ))}
             </div>
@@ -433,11 +503,15 @@ function App() {
                 isExpanded={expandedTermId === term.id}
                 isFavorite={favoriteIds.has(term.id)}
                 reviewStatus={reviewStatuses[term.id]}
+                reviewSchedule={reviewSchedules[term.id]}
+                memo={termMemos[term.id] ?? ''}
                 onToggleExpanded={() =>
                   setExpandedTermId((current) => (current === term.id ? null : term.id))
                 }
                 onToggleFavorite={toggleFavorite}
                 onUpdateReviewStatus={updateReviewStatus}
+                onUpdateMemo={updateTermMemo}
+                onOpenRelatedTerm={openRelatedTerm}
               />
             ))}
           </div>
@@ -445,6 +519,68 @@ function App() {
           {searchTerms.length === 0 && (
             <p className="empty-state-card">조건에 맞는 용어가 없습니다. 검색어나 분야를 조정해 주세요.</p>
           )}
+        </ModePanel>
+      )}
+
+      {activeMode === 'interpret' && (
+        <ModePanel
+          title="보고서 해석"
+          subtitle="Codex 보고서나 개발 문장을 붙여 넣고, 앱 안의 용어와 표현을 로컬에서 찾아봅니다."
+        >
+          <section className="interpret-panel" aria-label="보고서 해석 입력">
+            <label className="search-label" htmlFor="report-text">
+              보고서 / 지시문 / 리뷰 문장 붙여넣기
+            </label>
+            <textarea
+              id="report-text"
+              className="report-input"
+              value={reportText}
+              rows={8}
+              placeholder="예: Review the diff against acceptance criteria, identify boundary risks, and propose a rollback plan..."
+              onChange={(event) => setReportText(event.target.value)}
+            />
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={searchAllDecks}
+                onChange={(event) => setSearchAllDecks(event.target.checked)}
+              />
+              전체 Deck에서 해석
+            </label>
+          </section>
+
+          <div className="interpret-summary">
+            <span>매칭 용어 {reportMatches.length}개</span>
+            <span>{searchAllDecks ? '전체 Deck' : activeDeckDefinition.label}</span>
+          </div>
+
+          {reportText.trim() && reportMatches.length === 0 && (
+            <p className="empty-state-card">
+              아직 매칭되는 용어가 없습니다. 더 긴 문장을 붙여넣거나 전체 Deck 검색을 켜보세요.
+            </p>
+          )}
+
+          <div className="compact-list">
+            {reportMatches.map(({ term, reason }) => (
+              <CompactTermCard
+                key={term.id}
+                term={term}
+                isExpanded={expandedTermId === term.id}
+                isFavorite={favoriteIds.has(term.id)}
+                reviewStatus={reviewStatuses[term.id]}
+                reviewSchedule={reviewSchedules[term.id]}
+                memo={termMemos[term.id] ?? ''}
+                onToggleExpanded={() =>
+                  setExpandedTermId((current) => (current === term.id ? null : term.id))
+                }
+                onToggleFavorite={toggleFavorite}
+                onUpdateReviewStatus={updateReviewStatus}
+                onUpdateMemo={updateTermMemo}
+                onOpenRelatedTerm={openRelatedTerm}
+                matchReason={reason}
+              />
+            ))}
+          </div>
         </ModePanel>
       )}
 
@@ -521,16 +657,24 @@ type TermActionProps = {
   term: DevTerm
   isFavorite: boolean
   reviewStatus?: ReviewStatus
+  reviewSchedule?: ReviewSchedule
+  memo: string
   onToggleFavorite: (termId: string) => void
   onUpdateReviewStatus: (termId: string, status: ReviewStatus) => void
+  onUpdateMemo: (termId: string, memo: string) => void
+  onOpenRelatedTerm: (relatedTerm: string, sourceDeck: DeckId) => void
 }
 
 function StudyCard({
   term,
   isFavorite,
   reviewStatus,
+  reviewSchedule,
+  memo,
   onToggleFavorite,
   onUpdateReviewStatus,
+  onUpdateMemo,
+  onOpenRelatedTerm,
 }: TermActionProps) {
   return (
     <article className={`study-card deck-${term.deck}`}>
@@ -555,18 +699,20 @@ function StudyCard({
         {getUsageText(term)}
       </DetailBlock>
       <ConceptMapBlock term={term} />
-      <DeepDiveBlock term={term} />
+      <DeepDiveBlock term={term} onOpenRelatedTerm={onOpenRelatedTerm} />
       <DetailBlock label="확인 질문" tone="question">
         {term.checkQuestion}
       </DetailBlock>
       <ExpressionBlock term={term} />
       <PromptBlock term={term} />
       <CautionBlock term={term} />
+      <MemoBlock term={term} memo={memo} onUpdateMemo={onUpdateMemo} />
 
       <TermActions
         term={term}
         isFavorite={isFavorite}
         reviewStatus={reviewStatus}
+        reviewSchedule={reviewSchedule}
         onToggleFavorite={onToggleFavorite}
         onUpdateReviewStatus={onUpdateReviewStatus}
       />
@@ -577,6 +723,7 @@ function StudyCard({
 type CompactTermCardProps = TermActionProps & {
   isExpanded: boolean
   onToggleExpanded: () => void
+  matchReason?: string
 }
 
 function CompactTermCard({
@@ -584,9 +731,14 @@ function CompactTermCard({
   isExpanded,
   isFavorite,
   reviewStatus,
+  reviewSchedule,
+  memo,
   onToggleExpanded,
   onToggleFavorite,
   onUpdateReviewStatus,
+  onUpdateMemo,
+  onOpenRelatedTerm,
+  matchReason,
 }: CompactTermCardProps) {
   return (
     <article className={`compact-card ${isExpanded ? 'expanded' : ''} deck-${term.deck}`}>
@@ -599,6 +751,7 @@ function CompactTermCard({
           <h3>{term.term}</h3>
           <p className="compact-pronunciation">{term.pronunciation}</p>
           <p className="compact-meaning">{term.koreanMeaning}</p>
+          {matchReason && <p className="match-reason">{matchReason}</p>}
         </div>
         <StatusBadges isFavorite={isFavorite} reviewStatus={reviewStatus} />
       </div>
@@ -614,17 +767,19 @@ function CompactTermCard({
             {getUsageText(term)}
           </DetailBlock>
           <ConceptMapBlock term={term} />
-          <DeepDiveBlock term={term} />
+          <DeepDiveBlock term={term} onOpenRelatedTerm={onOpenRelatedTerm} />
           <DetailBlock label="확인 질문" tone="question">
             {term.checkQuestion}
           </DetailBlock>
           <ExpressionBlock term={term} />
           <PromptBlock term={term} />
           <CautionBlock term={term} />
+          <MemoBlock term={term} memo={memo} onUpdateMemo={onUpdateMemo} />
           <TermActions
             term={term}
             isFavorite={isFavorite}
             reviewStatus={reviewStatus}
+            reviewSchedule={reviewSchedule}
             onToggleFavorite={onToggleFavorite}
             onUpdateReviewStatus={onUpdateReviewStatus}
           />
@@ -699,7 +854,13 @@ function ConceptMapBlock({ term }: { term: DevTerm }) {
   )
 }
 
-function DeepDiveBlock({ term }: { term: DevTerm }) {
+function DeepDiveBlock({
+  term,
+  onOpenRelatedTerm,
+}: {
+  term: DevTerm
+  onOpenRelatedTerm: (relatedTerm: string, sourceDeck: DeckId) => void
+}) {
   return (
     <section className="deep-dive-block" aria-label={`${term.term} 심화 설명`}>
       {term.mechanism && (
@@ -727,7 +888,13 @@ function DeepDiveBlock({ term }: { term: DevTerm }) {
           <span>같이 볼 용어</span>
           <div>
             {term.relatedTerms.map((relatedTerm) => (
-              <span key={relatedTerm}>{relatedTerm}</span>
+              <button
+                type="button"
+                key={relatedTerm}
+                onClick={() => onOpenRelatedTerm(relatedTerm, term.deck)}
+              >
+                {relatedTerm}
+              </button>
             ))}
           </div>
         </div>
@@ -817,40 +984,75 @@ function CautionBlock({ term }: { term: DevTerm }) {
   )
 }
 
+function MemoBlock({
+  term,
+  memo,
+  onUpdateMemo,
+}: {
+  term: DevTerm
+  memo: string
+  onUpdateMemo: (termId: string, memo: string) => void
+}) {
+  return (
+    <div className="memo-block">
+      <label htmlFor={`memo-${term.id}`}>내 메모</label>
+      <textarea
+        id={`memo-${term.id}`}
+        value={memo}
+        rows={3}
+        placeholder="헷갈린 이유, 내 표현, 실제로 써먹을 문장을 적어두세요."
+        onChange={(event) => onUpdateMemo(term.id, event.target.value)}
+      />
+    </div>
+  )
+}
+
 function TermActions({
   term,
   isFavorite,
   reviewStatus,
+  reviewSchedule,
   onToggleFavorite,
   onUpdateReviewStatus,
-}: TermActionProps) {
+}: Pick<
+  TermActionProps,
+  'term' | 'isFavorite' | 'reviewStatus' | 'reviewSchedule' | 'onToggleFavorite' | 'onUpdateReviewStatus'
+>) {
   return (
-    <div className="term-actions" aria-label={`${term.term} 학습 동작`}>
-      <button
-        type="button"
-        className={reviewStatus === 'known' ? 'active known' : ''}
-        aria-pressed={reviewStatus === 'known'}
-        onClick={() => onUpdateReviewStatus(term.id, 'known')}
-      >
-        알고 있음
-      </button>
-      <button
-        type="button"
-        className={reviewStatus === 'review_again' ? 'active review' : ''}
-        aria-pressed={reviewStatus === 'review_again'}
-        onClick={() => onUpdateReviewStatus(term.id, 'review_again')}
-      >
-        다시 보기
-      </button>
-      <button
-        type="button"
-        className={isFavorite ? 'active favorite' : ''}
-        aria-pressed={isFavorite}
-        onClick={() => onToggleFavorite(term.id)}
-      >
-        중요 저장
-      </button>
-    </div>
+    <>
+      {reviewSchedule && (
+        <p className="review-schedule-note">
+          다음 복습: {formatReviewDate(reviewSchedule.nextReviewDate)} · 간격{' '}
+          {reviewSchedule.intervalDays}일
+        </p>
+      )}
+      <div className="term-actions" aria-label={`${term.term} 학습 동작`}>
+        <button
+          type="button"
+          className={reviewStatus === 'known' ? 'active known' : ''}
+          aria-pressed={reviewStatus === 'known'}
+          onClick={() => onUpdateReviewStatus(term.id, 'known')}
+        >
+          알고 있음
+        </button>
+        <button
+          type="button"
+          className={reviewStatus === 'review_again' ? 'active review' : ''}
+          aria-pressed={reviewStatus === 'review_again'}
+          onClick={() => onUpdateReviewStatus(term.id, 'review_again')}
+        >
+          다시 보기
+        </button>
+        <button
+          type="button"
+          className={isFavorite ? 'active favorite' : ''}
+          aria-pressed={isFavorite}
+          onClick={() => onToggleFavorite(term.id)}
+        >
+          중요 저장
+        </button>
+      </div>
+    </>
   )
 }
 
@@ -872,6 +1074,120 @@ function getDifficultyLabel(difficulty: DevTerm['difficulty']) {
     return '중급'
   }
   return '고급'
+}
+
+function isReviewDue(
+  schedule: ReviewSchedule | undefined,
+  todayDateKey: string,
+  reviewStatus?: ReviewStatus,
+) {
+  if (reviewStatus === 'review_again') {
+    return true
+  }
+  if (!schedule) {
+    return false
+  }
+  return dateKeyToNumber(schedule.nextReviewDate) <= dateKeyToNumber(todayDateKey)
+}
+
+function buildNextReviewSchedule(
+  current: ReviewSchedule | undefined,
+  status: ReviewStatus,
+  todayDateKey: string,
+): ReviewSchedule {
+  if (status === 'review_again') {
+    return {
+      nextReviewDate: todayDateKey,
+      intervalDays: 1,
+      repetitions: 0,
+      lastReviewedDate: todayDateKey,
+    }
+  }
+
+  const nextRepetitions = (current?.repetitions ?? 0) + 1
+  const nextInterval = [1, 3, 7, 14, 30, 60][Math.min(nextRepetitions - 1, 5)]
+  return {
+    nextReviewDate: addDaysToDateKey(todayDateKey, nextInterval),
+    intervalDays: nextInterval,
+    repetitions: nextRepetitions,
+    lastReviewedDate: todayDateKey,
+  }
+}
+
+function formatReviewDate(dateKey: string) {
+  const [year, month, day] = dateKey.split('-')
+  return `${year}.${month.padStart(2, '0')}.${day.padStart(2, '0')}`
+}
+
+function addDaysToDateKey(dateKey: string, days: number) {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  date.setDate(date.getDate() + days)
+  return getDateKey(date)
+}
+
+function dateKeyToNumber(dateKey: string) {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  return year * 10000 + month * 100 + day
+}
+
+function findTermByName(termName: string, preferredDeck: DeckId) {
+  const target = normalizeTermKey(termName)
+  return (
+    devTerms.find((term) => term.deck === preferredDeck && normalizeTermKey(term.term) === target) ??
+    devTerms.find((term) => normalizeTermKey(term.term) === target) ??
+    devTerms.find((term) => term.deck === preferredDeck && normalizeTermKey(term.koreanMeaning) === target) ??
+    devTerms.find((term) => normalizeTermKey(term.koreanMeaning) === target)
+  )
+}
+
+function findReportMatches(reportText: string, terms: DevTerm[]) {
+  const normalizedReport = normalizeTermKey(reportText)
+  if (!normalizedReport) {
+    return []
+  }
+
+  return terms
+    .map((term) => {
+      const candidates = [
+        ['영어 용어', term.term],
+        ['한국어 의미', term.koreanMeaning],
+        ['발음', term.pronunciation],
+        ['좋은 표현', term.goodExpression],
+        ['프롬프트', term.gptPromptExample],
+        ['Codex 예시', term.codexPromptExample],
+        ['관련 용어', term.relatedTerms?.join(' ')],
+      ] as Array<[string, string | undefined]>
+      const match = candidates.find(([, value]) => {
+        const normalizedValue = normalizeTermKey(value ?? '')
+        return normalizedValue.length >= 3 && normalizedReport.includes(normalizedValue)
+      })
+
+      return match
+        ? {
+            term,
+            reason: `${match[0]} 매칭`,
+            weight: normalizeTermKey(match[1] ?? '').length + getDifficultyWeight(term.difficulty),
+          }
+        : null
+    })
+    .filter((match): match is { term: DevTerm; reason: string; weight: number } => Boolean(match))
+    .sort((first, second) => second.weight - first.weight)
+    .slice(0, 50)
+}
+
+function getDifficultyWeight(difficulty: DevTerm['difficulty']) {
+  if (difficulty === 'advanced') {
+    return 8
+  }
+  if (difficulty === 'intermediate') {
+    return 4
+  }
+  return 1
+}
+
+function normalizeTermKey(value: string) {
+  return value.normalize('NFKC').toLocaleLowerCase('ko-KR').replace(/[^\p{L}\p{N}]+/gu, '')
 }
 
 function pickRandomTerm(terms: DevTerm[], currentId: string | null, seed?: string) {

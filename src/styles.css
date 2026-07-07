@@ -73,7 +73,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -83,7 +84,8 @@ button {
 }
 
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
@@ -243,7 +245,7 @@ h3 {
 
 .mode-nav {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.45rem;
   margin-top: 0.4rem;
 }
@@ -318,7 +320,8 @@ h3 {
 .study-card,
 .compact-card,
 .empty-state-card,
-.search-panel {
+.search-panel,
+.interpret-panel {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
@@ -507,7 +510,7 @@ h3 {
   gap: 0.35rem;
 }
 
-.related-terms div span {
+.related-terms div button {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 0.28rem 0.55rem;
@@ -515,6 +518,11 @@ h3 {
   background: var(--panel-strong);
   font-size: 0.78rem;
   font-weight: 850;
+}
+
+.related-terms div button:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .expression-grid,
@@ -560,6 +568,26 @@ h3 {
   font-size: 0.88rem;
   line-height: 1.55;
   overflow-wrap: anywhere;
+}
+
+.memo-block {
+  margin-top: 0.85rem;
+}
+
+.memo-block label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.review-schedule-note {
+  margin: 0.85rem 0 -0.35rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .term-actions {
@@ -615,6 +643,31 @@ h3 {
   font-weight: 750;
 }
 
+.interpret-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.75rem 0;
+}
+
+.interpret-summary span,
+.match-reason {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.interpret-summary span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.6rem;
+  background: var(--panel);
+}
+
+.match-reason {
+  margin: 0.35rem 0 0;
+}
+
 .primary-action {
   min-height: 2.85rem;
   border: 1px solid var(--accent);
@@ -644,19 +697,37 @@ h3 {
   margin-bottom: 0;
 }
 
-.search-panel {
+.search-panel,
+.interpret-panel {
   padding: 0.9rem;
   box-shadow: none;
 }
 
-.search-input {
+.search-input,
+.report-input,
+.memo-block textarea {
   width: 100%;
-  min-height: 3rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.75rem 0.85rem;
   color: var(--text);
   background: var(--panel);
+}
+
+.search-input {
+  min-height: 3rem;
+}
+
+.report-input,
+.memo-block textarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.search-input::placeholder,
+.report-input::placeholder,
+.memo-block textarea::placeholder {
+  color: color-mix(in srgb, var(--muted) 75%, transparent);
 }
 
 .filter-label {

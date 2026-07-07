@@ -1,10 +1,12 @@
-import type { ReviewStatus } from './types'
+import type { ReviewSchedule, ReviewStatus } from './types'
 
 const FAVORITES_KEY = 'joovis_terms_cockpit_favorites'
 const REVIEW_STATUS_KEY = 'joovis_terms_cockpit_review_statuses'
 const ONBOARDING_DISMISSED_KEY = 'joovis_terms_cockpit_onboarding_dismissed'
 const RANDOM_PRACTICE_COUNTS_KEY = 'joovis_terms_cockpit_random_practice_counts'
 const RANDOM_PRACTICE_HISTORY_KEY = 'joovis_terms_cockpit_random_practice_history'
+const TERM_MEMOS_KEY = 'joovis_terms_cockpit_term_memos'
+const REVIEW_SCHEDULES_KEY = 'joovis_terms_cockpit_review_schedules'
 
 export function loadFavoriteIds() {
   return new Set(readJson<string[]>(FAVORITES_KEY, []))
@@ -20,6 +22,22 @@ export function loadReviewStatuses() {
 
 export function saveReviewStatuses(reviewStatuses: Record<string, ReviewStatus>) {
   writeJson(REVIEW_STATUS_KEY, reviewStatuses)
+}
+
+export function loadReviewSchedules() {
+  return readJson<Record<string, ReviewSchedule>>(REVIEW_SCHEDULES_KEY, {})
+}
+
+export function saveReviewSchedules(reviewSchedules: Record<string, ReviewSchedule>) {
+  writeJson(REVIEW_SCHEDULES_KEY, reviewSchedules)
+}
+
+export function loadTermMemos() {
+  return readJson<Record<string, string>>(TERM_MEMOS_KEY, {})
+}
+
+export function saveTermMemos(termMemos: Record<string, string>) {
+  writeJson(TERM_MEMOS_KEY, termMemos)
 }
 
 export function loadOnboardingDismissed() {

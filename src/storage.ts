@@ -1,4 +1,4 @@
-import type { ReviewSchedule, ReviewStatus } from './types'
+import type { ReviewSchedule, ReviewStatus, SavedExpression } from './types'
 
 const FAVORITES_KEY = 'joovis_terms_cockpit_favorites'
 const REVIEW_STATUS_KEY = 'joovis_terms_cockpit_review_statuses'
@@ -7,6 +7,10 @@ const RANDOM_PRACTICE_COUNTS_KEY = 'joovis_terms_cockpit_random_practice_counts'
 const RANDOM_PRACTICE_HISTORY_KEY = 'joovis_terms_cockpit_random_practice_history'
 const TERM_MEMOS_KEY = 'joovis_terms_cockpit_term_memos'
 const REVIEW_SCHEDULES_KEY = 'joovis_terms_cockpit_review_schedules'
+const TRAINING_PRACTICE_COUNTS_KEY = 'joovis_terms_cockpit_training_practice_counts'
+const TRAINING_PRACTICE_HISTORY_KEY = 'joovis_terms_cockpit_training_practice_history'
+const ROUTINE_CHECKS_KEY = 'joovis_terms_cockpit_routine_checks'
+const SAVED_EXPRESSIONS_KEY = 'joovis_terms_cockpit_saved_expressions'
 
 export function loadFavoriteIds() {
   return new Set(readJson<string[]>(FAVORITES_KEY, []))
@@ -66,6 +70,44 @@ export function loadRandomPracticeHistory(dateKey: string) {
 export function saveRandomPracticeHistory(dateKey: string, termIds: string[]) {
   const histories = readJson<Record<string, string[]>>(RANDOM_PRACTICE_HISTORY_KEY, {})
   writeJson(RANDOM_PRACTICE_HISTORY_KEY, { ...histories, [dateKey]: termIds })
+}
+
+export function loadTrainingPracticeCount(dateKey: string) {
+  const counts = readJson<Record<string, number>>(TRAINING_PRACTICE_COUNTS_KEY, {})
+  return counts[dateKey] ?? 0
+}
+
+export function saveTrainingPracticeCount(dateKey: string, count: number) {
+  const counts = readJson<Record<string, number>>(TRAINING_PRACTICE_COUNTS_KEY, {})
+  writeJson(TRAINING_PRACTICE_COUNTS_KEY, { ...counts, [dateKey]: count })
+}
+
+export function loadTrainingPracticeHistory(dateKey: string) {
+  const histories = readJson<Record<string, string[]>>(TRAINING_PRACTICE_HISTORY_KEY, {})
+  return histories[dateKey] ?? []
+}
+
+export function saveTrainingPracticeHistory(dateKey: string, termIds: string[]) {
+  const histories = readJson<Record<string, string[]>>(TRAINING_PRACTICE_HISTORY_KEY, {})
+  writeJson(TRAINING_PRACTICE_HISTORY_KEY, { ...histories, [dateKey]: termIds })
+}
+
+export function loadRoutineChecks(dateKey: string) {
+  const checks = readJson<Record<string, string[]>>(ROUTINE_CHECKS_KEY, {})
+  return checks[dateKey] ?? []
+}
+
+export function saveRoutineChecks(dateKey: string, checkIds: string[]) {
+  const checks = readJson<Record<string, string[]>>(ROUTINE_CHECKS_KEY, {})
+  writeJson(ROUTINE_CHECKS_KEY, { ...checks, [dateKey]: checkIds })
+}
+
+export function loadSavedExpressions() {
+  return readJson<SavedExpression[]>(SAVED_EXPRESSIONS_KEY, [])
+}
+
+export function saveSavedExpressions(expressions: SavedExpression[]) {
+  writeJson(SAVED_EXPRESSIONS_KEY, expressions)
 }
 
 function readJson<T>(key: string, fallback: T): T {

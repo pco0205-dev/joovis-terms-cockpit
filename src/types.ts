@@ -44,6 +44,15 @@ export type ReviewSchedule = {
   lastReviewedDate: string
 }
 
+export type SavedExpression = {
+  id: string
+  original: string
+  improvedKo: string
+  improvedEn: string
+  createdAt: string
+  updatedAt: string
+}
+
 export type DevTerm = {
   id: string
   term: string

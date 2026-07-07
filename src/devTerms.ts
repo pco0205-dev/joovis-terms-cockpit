@@ -1292,11 +1292,198 @@ const disputeTerms = disputeSeedTerms.map(([term, koreanMeaning, simpleMeaning, 
   }),
 )
 
+const expertSeedTerms = [
+  ['ai-command', 'Intent Framing', '인텐트 프레이밍', '요청의 목적과 성공 기준을 먼저 고정하는 지휘 방식', 'AI가 무엇을 위해 판단하는지부터 맞추는 명령 설계입니다.', 'AI Command', 'intermediate', ['Scope', 'Acceptance Criteria', 'Output Contract']],
+  ['ai-command', 'Constraint Stack', '컨스트레인트 스택', '금지사항, 허용범위, 검증조건을 층처럼 쌓은 지시 구조', 'AI가 넘어가면 안 되는 경계를 우선순위로 묶습니다.', 'Boundary / Safety', 'advanced', ['Boundary', 'Guard', 'Fail-closed']],
+  ['ai-command', 'Output Contract', '아웃풋 컨트랙트', '응답 형식과 포함해야 할 항목을 계약처럼 고정한 기준', '보고서, 표, JSON, 판정 문구가 흔들리지 않게 만듭니다.', 'AI Command', 'intermediate', ['Contract', 'Schema', 'Acceptance Criteria']],
+  ['ai-command', 'Rubric', '루브릭', '좋고 나쁨을 판단하는 채점 기준표', '리뷰나 답변 품질을 감으로 보지 않고 기준별로 봅니다.', 'Review / QA', 'intermediate', ['Review Lens', 'Severity', 'Acceptance Probe']],
+  ['ai-command', 'Grounding', '그라운딩', '답변을 실제 근거, 파일, 로그, 문서에 묶는 방식', 'AI가 상상으로 말하지 않고 확인 가능한 근거에 붙어 있게 합니다.', 'Boundary / Safety', 'intermediate', ['Source of Truth', 'Provenance', 'Evidence Ladder']],
+  ['ai-command', 'Evidence Ladder', '에비던스 래더', '추정, 정황, 직접근거를 단계별로 구분하는 판단 구조', '확신도를 높이기 전에 근거 수준을 먼저 분리합니다.', 'Review / QA', 'advanced', ['Grounding', 'Provenance', 'Confidence']],
+  ['ai-command', 'Ambiguity Budget', '앰비규어티 버짓', '모호함을 어디까지 허용할지 정하는 한도', '불확실한 부분이 많으면 구현보다 질문이나 보류로 전환합니다.', 'AI Command', 'advanced', ['Assumption', 'Clarifying Question', 'Stop Condition']],
+  ['ai-command', 'Decision Record', '디시전 레코드', '왜 그렇게 결정했는지 남기는 짧은 판단 기록', '나중에 같은 결정을 되짚거나 되돌릴 수 있게 합니다.', 'Review / QA', 'intermediate', ['Handoff', 'Provenance', 'Rollback']],
+  ['ai-command', 'Counterexample', '카운터익잼플', '주장이나 설계를 깨뜨릴 수 있는 반례', '그럴듯한 답을 믿기 전에 안 되는 경우를 일부러 찾습니다.', 'Review / QA', 'intermediate', ['Regression', 'Invariant', 'Failure Mode']],
+  ['ai-command', 'Acceptance Probe', '억셉턴스 프로브', '완료 기준을 실제로 찔러보는 확인 질문이나 테스트', '작업이 끝났다는 말을 검증 가능한 조건으로 바꿉니다.', 'Review / QA', 'intermediate', ['Acceptance Criteria', 'Smoke Test', 'Checker']],
+  ['ai-command', 'Failure Mode', '페일러 모드', '시스템이나 지시가 실패하는 전형적인 방식', '무엇이 깨질 수 있는지 먼저 알면 검증 포인트가 선명해집니다.', 'Boundary / Safety', 'intermediate', ['Fail-closed', 'Rollback', 'Counterexample']],
+  ['ai-command', 'Escalation Criteria', '에스컬레이션 크라이테리아', '언제 멈추고 사용자 확인이나 전문가 판단으로 넘길지 정한 기준', '애매한 상태에서 AI가 계속 밀고 나가지 않게 합니다.', 'Boundary / Safety', 'advanced', ['Stop Condition', 'Boundary', 'Risk Gate']],
+  ['ai-command', 'Stop Condition', '스톱 컨디션', '작업을 즉시 멈춰야 하는 조건', '권한, 경로, 개인정보, 법적 위험처럼 넘으면 안 되는 선을 만듭니다.', 'Boundary / Safety', 'intermediate', ['Fail-closed', 'Escalation Criteria', 'Guard']],
+  ['ai-command', 'Instruction Priority', '인스트럭션 프라이어리티', '여러 지시가 충돌할 때 어느 지시가 우선인지 정하는 질서', '시스템, 개발자, 사용자, 파일 지시의 우선순위를 구분합니다.', 'AI Command', 'advanced', ['System Instruction', 'Boundary', 'Contract']],
+  ['ai-command', 'Prompt Injection', '프롬프트 인젝션', '입력 데이터가 AI의 지시 체계를 흔들려는 공격 또는 위험 패턴', '문서나 웹페이지 내용이 명령처럼 행동하지 못하게 분리합니다.', 'Boundary / Safety', 'advanced', ['Tool Boundary', 'Guard', 'Sandbox']],
+  ['ai-command', 'Tool Boundary', '툴 바운더리', 'AI가 도구로 실제 변경을 할 수 있는 범위', '읽기, 쓰기, 실행, 네트워크 같은 능력 경계를 명확히 합니다.', 'Boundary / Safety', 'advanced', ['Capability State', 'Sandbox', 'Side Effect']],
+  ['development', 'Control Flow', '컨트롤 플로우', '코드가 어떤 순서와 조건으로 실행되는지의 흐름', 'if, loop, return, error path를 따라 실제 실행 경로를 봅니다.', 'Programming', 'basic', ['Invariant', 'State Machine', 'Side Effect']],
+  ['development', 'State Machine', '스테이트 머신', '상태와 상태 전환 규칙으로 동작을 설명하는 모델', '로그인됨, 로딩중, 실패 같은 상태가 어떤 조건에서 바뀌는지 봅니다.', 'Architecture', 'advanced', ['Invariant', 'Transition', 'Guard']],
+  ['development', 'Transition', '트랜지션', '한 상태에서 다른 상태로 넘어가는 변화', '상태 변화가 언제 허용되고 어떤 부작용을 만드는지 확인합니다.', 'Architecture', 'intermediate', ['State Machine', 'Invariant', 'Side Effect']],
+  ['development', 'Transaction', '트랜잭션', '여러 작업을 하나의 성공/실패 단위로 묶는 처리', '중간에 실패하면 일부만 반영되지 않도록 경계를 만듭니다.', 'Data / Schema', 'advanced', ['Atomicity', 'Rollback', 'ACID']],
+  ['development', 'Atomicity', '아토믹시티', '작업이 전부 성공하거나 전부 실패해야 한다는 성질', '부분 적용으로 데이터가 어긋나는 것을 막습니다.', 'Data / Schema', 'advanced', ['Transaction', 'Rollback', 'Invariant']],
+  ['development', 'Consistency', '컨시스턴시', '처리 전후에 데이터 규칙이 유지되는 성질', '스키마, 제약조건, 비즈니스 규칙이 깨지지 않는지 봅니다.', 'Data / Schema', 'advanced', ['Invariant', 'Schema', 'Validation']],
+  ['development', 'Isolation', '아이솔레이션', '동시에 실행되는 작업들이 서로를 깨뜨리지 않게 분리되는 성질', '동시성 문제와 레이스 컨디션을 줄입니다.', 'Runtime / Integration', 'advanced', ['Concurrency', 'Race Condition', 'Transaction']],
+  ['development', 'Durability', '듀러빌리티', '성공한 변경이 장애 후에도 사라지지 않는 성질', '저장소에 확정된 기록이 재시작 후에도 남는지 봅니다.', 'Runtime / Integration', 'advanced', ['Transaction', 'Persistence', 'Rollback']],
+  ['development', 'Serialization', '시리얼라이제이션', '객체나 상태를 저장/전송 가능한 문자열 또는 바이트로 바꾸는 과정', 'localStorage, JSON, API 요청에서 구조를 납작하게 만듭니다.', 'Data / Schema', 'intermediate', ['JSON', 'Deserialization', 'Schema']],
+  ['development', 'Deserialization', '디시리얼라이제이션', '저장/전송된 데이터를 다시 객체나 구조로 복원하는 과정', '외부 입력을 복원할 때 검증이 반드시 필요합니다.', 'Data / Schema', 'intermediate', ['Serialization', 'Validation', 'Parser']],
+  ['development', 'Validation', '밸리데이션', '입력이 요구 조건과 형식에 맞는지 확인하는 절차', '데이터를 믿기 전에 타입, 범위, 필수값을 확인합니다.', 'Review / QA', 'basic', ['Schema', 'Checker', 'Acceptance Probe']],
+  ['development', 'Normalization', '노멀라이제이션', '비교나 저장을 쉽게 하려고 표현을 표준 형태로 맞추는 처리', '대소문자, 공백, 구두점 차이 때문에 중복이 생기지 않게 합니다.', 'Data / Schema', 'intermediate', ['Deduplication', 'Schema', 'Parser']],
+  ['development', 'Parser', '파서', '문자열을 의미 있는 구조로 읽어내는 코드', '명령, 파일, JSON, CSV를 프로그램이 이해할 수 있게 바꿉니다.', 'Programming', 'intermediate', ['AST', 'Validation', 'Schema']],
+  ['development', 'AST', '에이에스티', '코드를 트리 구조로 표현한 추상 구문 트리', '린터, 포매터, 컴파일러가 코드를 구조적으로 분석할 때 씁니다.', 'Programming', 'advanced', ['Parser', 'Transpilation', 'Type Inference']],
+  ['development', 'Type Inference', '타입 인퍼런스', '명시하지 않은 타입을 도구가 문맥으로 추론하는 기능', 'TypeScript가 변수와 반환값의 형태를 자동으로 좁혀 봅니다.', 'Programming', 'intermediate', ['TypeScript', 'Type Narrowing', 'Schema']],
+  ['development', 'Type Narrowing', '타입 내로잉', '조건문이나 검사로 넓은 타입을 더 구체적인 타입으로 줄이는 기법', 'null, union type, optional field를 안전하게 다룹니다.', 'Programming', 'intermediate', ['Type Inference', 'Guard', 'Validation']],
+  ['development', 'Concurrency', '컨커런시', '여러 작업이 겹쳐 진행되는 실행 모델', '동시에 보이지만 순서와 공유 상태 때문에 버그가 생길 수 있습니다.', 'Runtime / Integration', 'advanced', ['Race Condition', 'Isolation', 'Mutex']],
+  ['development', 'Race Condition', '레이스 컨디션', '실행 순서 차이로 결과가 달라지는 버그', '빠른 클릭, 중복 요청, 비동기 저장에서 자주 발생합니다.', 'Runtime / Integration', 'advanced', ['Concurrency', 'Mutex', 'Invariant']],
+  ['development', 'Deadlock', '데드락', '작업들이 서로가 가진 자원을 기다리며 멈추는 상태', '락 순서와 타임아웃 설계로 예방합니다.', 'Runtime / Integration', 'advanced', ['Mutex', 'Timeout', 'Concurrency']],
+  ['development', 'Mutex', '뮤텍스', '한 번에 하나의 작업만 자원에 접근하게 하는 잠금', '공유 상태를 안전하게 바꾸기 위한 동시성 도구입니다.', 'Runtime / Integration', 'advanced', ['Lock', 'Race Condition', 'Deadlock']],
+  ['development', 'Cache Invalidation', '캐시 인밸리데이션', '오래된 캐시를 언제 버릴지 정하는 문제', '데이터는 빨리 보이게 하되 틀린 값이 오래 남지 않게 합니다.', 'Runtime / Integration', 'advanced', ['Cache', 'Source of Truth', 'Staleness']],
+  ['development', 'Retry Policy', '리트라이 폴리시', '실패한 작업을 언제 몇 번 다시 시도할지 정한 규칙', '일시적 실패와 영구 실패를 구분해서 재시도합니다.', 'Runtime / Integration', 'intermediate', ['Backoff', 'Idempotent', 'Circuit Breaker']],
+  ['development', 'Backoff', '백오프', '재시도 간격을 점점 늘리는 방식', '서버나 시스템이 회복할 시간을 주고 폭주를 막습니다.', 'Runtime / Integration', 'intermediate', ['Retry Policy', 'Rate Limit', 'Circuit Breaker']],
+  ['development', 'Circuit Breaker', '서킷 브레이커', '반복 실패 시 호출을 잠시 끊어 시스템을 보호하는 패턴', '문제가 있는 의존성에 계속 요청을 보내지 않게 합니다.', 'Runtime / Integration', 'advanced', ['Dependency', 'Fail-closed', 'Retry Policy']],
+  ['development', 'Rate Limit', '레이트 리밋', '일정 시간에 허용되는 요청 수 제한', '서비스 보호와 비용 통제를 위해 호출량을 제한합니다.', 'Runtime / Integration', 'intermediate', ['Backoff', 'Quota', 'Retry Policy']],
+  ['development', 'Pagination', '페이지네이션', '많은 데이터를 페이지 단위로 나눠 가져오는 방식', '리스트가 커져도 화면과 네트워크를 가볍게 유지합니다.', 'Runtime / Integration', 'basic', ['Cursor', 'Limit', 'Offset']],
+  ['development', 'Idempotency Key', '아이덴포턴시 키', '같은 요청이 중복 실행되어도 한 번만 처리되게 하는 식별자', '결제, 저장, 생성 요청의 중복 부작용을 막습니다.', 'Runtime / Integration', 'advanced', ['Idempotent', 'Side Effect', 'Retry Policy']],
+  ['development', 'Webhook', '웹훅', '이벤트가 생겼을 때 다른 시스템으로 보내는 HTTP 알림', '폴링 대신 변화가 발생한 순간 downstream을 깨웁니다.', 'Runtime / Integration', 'intermediate', ['Event', 'Downstream', 'Contract']],
+  ['development', 'Event Loop', '이벤트 루프', '비동기 작업과 콜백을 순서대로 처리하는 실행 메커니즘', 'JavaScript 런타임에서 화면 반응과 비동기 처리가 돌아가는 핵심입니다.', 'Runtime', 'advanced', ['Async', 'Queue', 'Concurrency']],
+  ['development', 'Memory Leak', '메모리 리크', '더 이상 필요 없는 메모리가 해제되지 않고 남는 문제', '앱이 오래 켜질수록 느려지거나 죽을 수 있습니다.', 'Runtime', 'intermediate', ['Garbage Collection', 'Lifecycle', 'Resource']],
+  ['development', 'Garbage Collection', '가비지 컬렉션', '사용하지 않는 메모리를 런타임이 자동 회수하는 기능', '개발자가 직접 해제하지 않아도 되지만 참조가 남으면 회수되지 않습니다.', 'Runtime', 'intermediate', ['Memory Leak', 'Reference', 'Runtime']],
+  ['development', 'Primary Key', '프라이머리 키', '테이블의 각 행을 고유하게 식별하는 값', '중복 없이 한 레코드를 정확히 가리킵니다.', 'Data / Schema', 'basic', ['Foreign Key', 'Index', 'Schema']],
+  ['development', 'Foreign Key', '포린 키', '다른 테이블의 행을 참조하는 연결 키', '데이터 관계가 끊어지지 않게 참조 무결성을 만듭니다.', 'Data / Schema', 'intermediate', ['Primary Key', 'Referential Integrity', 'Schema']],
+  ['development', 'Index', '인덱스', '데이터를 빠르게 찾기 위한 보조 구조', '검색은 빨라지지만 쓰기 비용과 저장 공간이 늘 수 있습니다.', 'Data / Schema', 'intermediate', ['Query Plan', 'Database', 'Performance']],
+  ['development', 'Query Plan', '쿼리 플랜', 'DB가 SQL을 실행하기 위해 선택한 접근 경로', '왜 느린지 보려면 실제 실행 계획을 확인합니다.', 'Data / Schema', 'advanced', ['Index', 'SQL Query', 'Optimizer']],
+  ['development', 'CORS', '코스', '브라우저가 다른 출처 요청을 제한하는 보안 정책', '프론트엔드 API 호출 실패 원인을 판단할 때 자주 봅니다.', 'Runtime / Integration', 'intermediate', ['Origin', 'Browser', 'HTTP']],
+  ['development', 'TLS', '티엘에스', '네트워크 통신을 암호화하고 서버 신원을 확인하는 프로토콜', 'HTTPS 보안 연결의 기반입니다.', 'Runtime / Integration', 'intermediate', ['Certificate', 'HTTPS', 'Security']],
+  ['libraries-tools', 'JSX', '제이에스엑스', 'JavaScript 안에서 UI 구조를 태그처럼 쓰는 문법', 'React 컴포넌트의 화면 구조를 표현합니다.', 'React', 'basic', ['React', 'Component', 'Transpilation']],
+  ['libraries-tools', 'Props', '프롭스', '부모 컴포넌트가 자식 컴포넌트에 전달하는 입력값', '컴포넌트를 재사용 가능하게 만드는 외부 입력입니다.', 'React', 'basic', ['Component', 'State', 'Interface']],
+  ['libraries-tools', 'State', '스테이트', '컴포넌트가 기억하고 변화시키는 내부 값', '사용자 입력, 선택 모드, 열림 상태처럼 화면을 바꾸는 값입니다.', 'React', 'basic', ['Hook', 'Reducer', 'State Machine']],
+  ['libraries-tools', 'Context Provider', '컨텍스트 프로바이더', '여러 컴포넌트가 공통 값을 내려받게 하는 React 구조', '깊은 props 전달을 줄이지만 남용하면 결합도가 커집니다.', 'React', 'intermediate', ['Context', 'Props', 'Coupling']],
+  ['libraries-tools', 'Reducer', '리듀서', '현재 상태와 액션을 받아 다음 상태를 계산하는 함수', '복잡한 상태 전환을 한곳에서 예측 가능하게 만듭니다.', 'React', 'intermediate', ['State', 'Action', 'State Machine']],
+  ['libraries-tools', 'Memoization', '메모이제이션', '같은 입력의 계산 결과를 재사용하는 최적화', '비싼 계산이나 불필요한 렌더링을 줄입니다.', 'React', 'intermediate', ['Cache', 'Performance', 'Dependency']],
+  ['libraries-tools', 'Reconciliation', '리컨실리에이션', 'React가 이전 UI와 새 UI 차이를 비교해 실제 DOM 변경을 줄이는 과정', '상태가 바뀌어도 필요한 부분만 갱신하려는 메커니즘입니다.', 'React', 'advanced', ['Virtual DOM', 'Render', 'Diff']],
+  ['libraries-tools', 'Hydration', '하이드레이션', '서버에서 만든 HTML에 브라우저 JavaScript 동작을 붙이는 과정', '정적 HTML이 상호작용 가능한 앱으로 살아나는 단계입니다.', 'Frontend Frameworks', 'advanced', ['SSR', 'React', 'Runtime']],
+  ['libraries-tools', 'Bundle', '번들', '브라우저가 읽도록 여러 코드 파일을 묶은 결과물', '배포 시 다운로드되는 JavaScript/CSS 덩어리입니다.', 'Build Tools', 'basic', ['Vite', 'Tree Shaking', 'Chunk']],
+  ['libraries-tools', 'Transpilation', '트랜스파일레이션', '한 문법의 코드를 다른 문법의 코드로 변환하는 과정', 'TypeScript나 JSX가 브라우저용 JavaScript로 바뀝니다.', 'Build Tools', 'intermediate', ['TypeScript', 'JSX', 'Source Map']],
+  ['libraries-tools', 'Tree Shaking', '트리 셰이킹', '사용하지 않는 코드를 번들에서 제거하는 최적화', '앱 크기를 줄이고 로딩을 빠르게 합니다.', 'Build Tools', 'intermediate', ['Bundle', 'Dependency', 'Vite']],
+  ['libraries-tools', 'Source Map', '소스맵', '변환된 코드와 원본 코드를 연결하는 디버깅 지도', '브라우저 오류를 원래 TypeScript 위치로 추적합니다.', 'Build Tools', 'intermediate', ['Transpilation', 'Debugging', 'Stack Trace']],
+  ['libraries-tools', 'Hot Module Replacement', '핫 모듈 리플레이스먼트', '개발 중 전체 새로고침 없이 바뀐 모듈만 교체하는 기능', 'Vite 개발 서버가 빠르게 화면을 갱신하게 합니다.', 'Build Tools', 'basic', ['Vite', 'Module', 'Dev Server']],
+  ['libraries-tools', 'Lockfile', '락파일', '설치된 패키지의 정확한 버전을 고정하는 파일', '다른 환경에서도 같은 의존성 조합으로 설치되게 합니다.', 'Package Managers', 'intermediate', ['Dependency', 'npm', 'Reproducibility']],
+  ['libraries-tools', 'Semantic Versioning', '시맨틱 버저닝', '버전을 major.minor.patch 의미로 관리하는 규칙', '업데이트 위험도를 버전 숫자로 대략 판단합니다.', 'Package Managers', 'basic', ['Dependency', 'Breaking Change', 'package.json']],
+  ['libraries-tools', 'DataFrame', '데이터프레임', '행과 열로 구성된 표 형태 데이터 구조', 'pandas에서 CSV나 분석 데이터를 다룰 때 핵심 단위입니다.', 'Data Tools', 'basic', ['pandas', 'Series', 'Schema']],
+  ['libraries-tools', 'Series', '시리즈', 'DataFrame의 한 열처럼 1차원으로 정렬된 데이터', '컬럼 단위 계산과 필터링에 자주 사용됩니다.', 'Data Tools', 'basic', ['DataFrame', 'pandas', 'Column']],
+  ['libraries-tools', 'SQL Query', '에스큐엘 쿼리', '데이터베이스에 원하는 데이터를 요청하는 문장', 'SELECT, WHERE, JOIN으로 필요한 데이터를 추립니다.', 'Data Tools', 'basic', ['DuckDB', 'Query Plan', 'Schema']],
+  ['libraries-tools', 'Browser DevTools', '브라우저 데브툴즈', '브라우저에서 DOM, 네트워크, 콘솔, 성능을 확인하는 도구', '프론트엔드 문제를 실제 실행 환경에서 분석합니다.', 'Quality Tools', 'basic', ['Console', 'Network Tab', 'Source Map']],
+  ['libraries-tools', 'Lighthouse', '라이트하우스', '웹 성능, 접근성, PWA 품질을 점검하는 도구', '배포 전 앱의 사용성과 설치 가능성을 확인합니다.', 'Quality Tools', 'intermediate', ['PWA', 'Performance', 'Accessibility']],
+  ['libraries-tools', 'Playwright', '플레이라이트', '브라우저를 자동 조작해 화면과 흐름을 테스트하는 도구', '실제 사용자처럼 클릭하고 스크린샷을 검증합니다.', 'Quality Tools', 'intermediate', ['Smoke Test', 'Regression', 'Browser']],
+  ['libraries-tools', 'Vitest', '바이테스트', 'Vite 환경에 잘 맞는 JavaScript/TypeScript 테스트 러너', '함수와 컴포넌트 동작을 빠르게 검증합니다.', 'Quality Tools', 'intermediate', ['Unit Test', 'Vite', 'Regression']],
+  ['libraries-tools', 'Prettier', '프리티어', '코드 형식을 자동으로 맞추는 포매터', '스타일 논쟁보다 일관된 형식 유지에 집중합니다.', 'Quality Tools', 'basic', ['Formatting', 'ESLint', 'Diff']],
+  ['joovis-architecture', 'Control Plane', '컨트롤 플레인', '정책, 명령, 상태 전환을 결정하는 제어 영역', '실제 데이터 처리와 지휘 판단을 분리해서 봅니다.', 'Architecture', 'advanced', ['Data Plane', 'Command Surface', 'Guard']],
+  ['joovis-architecture', 'Data Plane', '데이터 플레인', '실제 데이터가 흐르고 처리되는 실행 영역', '제어 결정이 적용되는 데이터 흐름을 의미합니다.', 'Architecture', 'advanced', ['Control Plane', 'Pipeline', 'Data Block']],
+  ['joovis-architecture', 'Truth Graph', '트루스 그래프', '사실, 출처, 판단, 상태를 노드와 관계로 연결한 지식 구조', '단편 기록이 아니라 연결된 현재 진실을 봅니다.', 'Truth Surface', 'advanced', ['Current Truth', 'Provenance', 'Knowledge Boundary']],
+  ['joovis-architecture', 'State Ledger', '스테이트 레저', '중요 상태 변화와 판단을 시간순으로 남기는 기록장', '왜 현재 상태가 되었는지 되짚을 수 있게 합니다.', 'State', 'intermediate', ['State Capsule', 'Decision Record', 'Immutable Log']],
+  ['joovis-architecture', 'Replay Harness', '리플레이 하니스', '과거 입력과 상태를 다시 실행해 결과를 확인하는 검증 장치', '재현 가능한 실패 분석과 회귀 검증에 씁니다.', 'Review', 'advanced', ['Replay', 'Regression', 'Fixture']],
+  ['joovis-architecture', 'Autopsy Trail', '오톱시 트레일', '실패 분석에서 원인, 증거, 조치가 이어진 추적 기록', '감정적 해석보다 재현 가능한 실패 경로를 남깁니다.', 'Review', 'advanced', ['Autopsy', 'Provenance', 'Decision Record']],
+  ['joovis-architecture', 'Capability Matrix', '케이퍼빌리티 매트릭스', '각 모듈이나 에이전트가 할 수 있는 일과 금지된 일을 표로 정리한 것', '권한과 책임 경계를 명확히 합니다.', 'Boundary', 'advanced', ['Capability State', 'Tool Boundary', 'Contract']],
+  ['joovis-architecture', 'Risk Gate', '리스크 게이트', '위험이 큰 변경을 통과시키기 전에 검증하는 관문', '실행 전 멈춤, 검토, 승인 조건을 둡니다.', 'Boundary', 'intermediate', ['Guard', 'Fail-closed', 'Escalation Criteria']],
+  ['joovis-architecture', 'Review Gate', '리뷰 게이트', '다음 단계로 넘기기 전 품질과 경계를 확인하는 관문', '검증 없는 릴레이를 막습니다.', 'Review', 'intermediate', ['Review Cockpit', 'Acceptance Probe', 'Checker']],
+  ['joovis-architecture', 'Snapshot', '스냅샷', '특정 시점의 상태를 고정해 저장한 것', '비교, 복원, 재현의 기준점이 됩니다.', 'State', 'basic', ['Checkpoint', 'Rollback', 'State Capsule']],
+  ['joovis-architecture', 'Checkpoint', '체크포인트', '긴 작업 중 되돌아갈 수 있도록 잡아 둔 중간 기준점', '실패해도 처음부터 다시 하지 않게 합니다.', 'State', 'basic', ['Snapshot', 'Rollback', 'Migration']],
+  ['joovis-architecture', 'Golden Path', '골든 패스', '가장 정상적이고 권장되는 기본 흐름', '예외 처리보다 먼저 표준 동선을 분명히 합니다.', 'Flow', 'intermediate', ['Pipeline', 'Acceptance Criteria', 'Invariant']],
+  ['joovis-architecture', 'Degraded Mode', '디그레이디드 모드', '일부 기능이 제한된 상태로 안전하게 계속 동작하는 모드', '완전 실패 대신 핵심 기능만 유지합니다.', 'Runtime', 'advanced', ['Fail-closed', 'Fallback', 'Guard']],
+  ['joovis-architecture', 'Operator Loop', '오퍼레이터 루프', '사람이 상태를 보고 결정하고 다시 시스템에 반영하는 운영 순환', '자동화와 사람 판단이 만나는 반복 구조입니다.', 'Runtime', 'intermediate', ['Human-in-the-loop', 'Telemetry', 'Review Cockpit']],
+  ['joovis-architecture', 'Human-in-the-loop', '휴먼 인 더 루프', '자동 판단 사이에 사람 검토를 넣는 설계', '위험하거나 애매한 판단은 사람에게 넘깁니다.', 'Boundary', 'intermediate', ['Escalation Criteria', 'Review Gate', 'Manual Confirmation']],
+  ['joovis-architecture', 'Work Queue', '워크 큐', '처리할 일을 순서와 상태로 쌓아 둔 대기열', '검토, 재시도, 병렬 처리의 기준이 됩니다.', 'Flow', 'basic', ['Queue', 'Pipeline', 'Verification Queue']],
+  ['joovis-architecture', 'Knowledge Boundary', '날리지 바운더리', '시스템이 알고 있는 것과 모르는 것을 구분하는 지식 경계', '추정과 확인된 사실을 섞지 않게 합니다.', 'Knowledge', 'advanced', ['Grounding', 'Source of Truth', 'Current Truth']],
+  ['joovis-architecture', 'Immutable Log', '이뮤터블 로그', '기존 기록을 수정하지 않고 새 기록만 추가하는 로그', '감사 가능성과 재현성을 높입니다.', 'State', 'advanced', ['append-only', 'State Ledger', 'Provenance']],
+  ['joovis-architecture', 'Drift Monitor', '드리프트 모니터', '기준 상태와 현재 상태가 얼마나 달라졌는지 감시하는 장치', '모델, 데이터, 정책이 조용히 달라지는 문제를 찾습니다.', 'Runtime', 'advanced', ['Invariant', 'Telemetry', 'Regression']],
+  ['dispute-integration', 'Chain of Custody', '체인 오브 커스터디', '증거가 누구 손을 거쳐 어떻게 보관되었는지의 관리 이력', '원본성과 변경 가능성을 판단할 때 중요한 추적 구조입니다.', '원본/출처', 'advanced', ['원본성', '변경이력', 'Audit Trail']],
+  ['dispute-integration', 'Exhibit', '엑시빗', '주장이나 쟁점을 뒷받침하기 위해 붙이는 증거 첨부물', '자료를 제출 단위로 정리할 때 사용합니다.', '문서버전', 'basic', ['제출본', '증거목록', 'Bates Number']],
+  ['dispute-integration', 'Bates Number', '베이츠 넘버', '문서 제출본의 각 페이지나 파일에 붙이는 고유 번호', '대량 자료에서 인용 위치를 흔들리지 않게 합니다.', '문서버전', 'intermediate', ['Exhibit', '인용문맥', '기록목록']],
+  ['dispute-integration', 'Redaction', '리댁션', '민감정보를 보이지 않게 가리는 처리', '공개나 제출 전에 개인정보와 비공개 정보를 보호합니다.', '프라이버시', 'basic', ['민감정보', '비식별화', 'Redaction Log']],
+  ['dispute-integration', 'Redaction Log', '리댁션 로그', '어떤 정보를 왜 가렸는지 남기는 기록', '가림 처리의 이유와 범위를 나중에 설명할 수 있게 합니다.', '프라이버시', 'intermediate', ['Redaction', '민감정보', '접근권한']],
+  ['dispute-integration', 'Privilege Review', '프리빌리지 리뷰', '보호되거나 비공개로 유지해야 할 자료인지 검토하는 절차', '제출 전 공개 위험이 있는 자료를 분리합니다.', '검토', 'advanced', ['접근권한', 'Confidentiality Designation', '인용금지']],
+  ['dispute-integration', 'Relevance', '렐러번스', '자료가 쟁점 판단과 관련 있는 정도', '자료가 많을 때 주장과 무관한 것을 걸러냅니다.', '쟁점정리', 'basic', ['쟁점', '증거-주장 연결', 'Materiality']],
+  ['dispute-integration', 'Materiality', '머티리얼리티', '판단 결과에 영향을 줄 만큼 중요한 정도', '관련은 있지만 결정에 별 영향이 없는 자료와 구분합니다.', '쟁점정리', 'advanced', ['Relevance', '증명력', '판단근거']],
+  ['dispute-integration', 'Admissibility', '어드미서빌리티', '자료가 절차에서 증거로 받아들여질 수 있는지의 문제', '증거능력과 제출 조건을 분리해서 봅니다.', '증거관리', 'advanced', ['증거능력', '원본성', 'Authentication']],
+  ['dispute-integration', 'Authentication', '오센티케이션', '자료가 주장하는 바로 그 자료인지 확인하는 과정', '원본대조, 출처추적, 파일해시로 뒷받침합니다.', '원본/출처', 'advanced', ['원본대조', '파일해시', 'Chain of Custody']],
+  ['dispute-integration', 'Foundation', '파운데이션', '증거를 이해하고 받아들이기 위한 기본 설명과 전제', '누가 만들었고 어떤 맥락인지 먼저 세웁니다.', '증거관리', 'advanced', ['진술서', '출처추적', 'Authentication']],
+  ['dispute-integration', 'Custodian', '커스터디언', '자료를 보유하거나 관리하던 사람 또는 시스템 역할', '출처와 보관 경로를 설명할 때 쓰는 일반 용어입니다.', '원본/출처', 'intermediate', ['Chain of Custody', 'Source System', '접근권한']],
+  ['dispute-integration', 'Production Set', '프로덕션 셋', '제출하거나 공유하기 위해 묶은 자료 세트', '원본, 제출본, 파생파일을 구분해서 관리합니다.', '문서버전', 'intermediate', ['제출본', 'Native File', 'Load File']],
+  ['dispute-integration', 'Native File', '네이티브 파일', '원래 프로그램 형식 그대로의 파일', 'PDF 변환본과 달리 원본 속성이나 메타데이터가 남을 수 있습니다.', '문서버전', 'intermediate', ['원본파일', '메타데이터', '파생파일']],
+  ['dispute-integration', 'Load File', '로드 파일', '대량 문서 검토 시스템에 자료와 메타데이터를 불러오기 위한 색인 파일', '전문 검토 도구에서 문서 묶음을 재현할 때 사용합니다.', '문서버전', 'advanced', ['Production Set', '메타데이터', 'Bates Number']],
+  ['dispute-integration', 'Deduplication', '디듀플리케이션', '같거나 실질적으로 같은 자료를 중복 제거하는 과정', '증거목록이 부풀거나 같은 자료가 여러 번 검토되는 것을 줄입니다.', '기록정리', 'intermediate', ['중복파일', '파일해시', 'Near-Duplicate']],
+  ['dispute-integration', 'Near-Duplicate', '니어 듀플리케이트', '거의 같지만 일부만 다른 자료', '본문은 비슷해도 날짜, 서명, 첨부가 다를 수 있어 별도 확인합니다.', '기록정리', 'advanced', ['Deduplication', '변경이력', '확인필요']],
+  ['dispute-integration', 'Threading', '스레딩', '메일이나 대화를 주고받은 흐름 단위로 묶는 정리 방식', '단일 메시지보다 앞뒤 맥락을 함께 봅니다.', '기록정리', 'intermediate', ['타임라인', '인용문맥', 'Source System']],
+  ['dispute-integration', 'Legal Hold', '리걸 홀드', '관련 자료를 삭제하거나 변경하지 말고 보존하도록 하는 조치', '자료 보존 필요성이 생긴 시점부터 변경을 막는 개념입니다.', '절차', 'advanced', ['Preservation Notice', 'append-only', '자료봉인']],
+  ['dispute-integration', 'Preservation Notice', '프리저베이션 노티스', '자료 보존 필요성을 알리는 통지', '삭제 방지와 보관 범위를 명확히 하는 일반 용어입니다.', '절차', 'advanced', ['Legal Hold', 'Collection Scope', '원본성']],
+  ['dispute-integration', 'Collection Scope', '컬렉션 스코프', '수집할 자료의 기간, 출처, 종류, 범위', '너무 좁으면 누락되고 너무 넓으면 검토 비용이 커집니다.', '절차', 'intermediate', ['Scope', 'Source System', '누락자료']],
+  ['dispute-integration', 'Review Protocol', '리뷰 프로토콜', '자료 검토 기준, 태그, 품질확인 절차를 정한 규칙', '검토자마다 다른 판단을 줄입니다.', '검토', 'advanced', ['Issue Coding', 'Quality Control Sample', '수기검수']],
+  ['dispute-integration', 'Issue Coding', '이슈 코딩', '문서에 쟁점 태그나 판단 코드를 붙이는 작업', '검색과 쟁점별 묶음을 빠르게 만듭니다.', '쟁점정리', 'intermediate', ['쟁점태그', 'Review Protocol', '증거-주장 연결']],
+  ['dispute-integration', 'Quality Control Sample', '퀄리티 컨트롤 샘플', '전체 검토 품질을 확인하기 위해 뽑은 표본', '자동 처리나 사람 검토의 오류율을 점검합니다.', '검토', 'advanced', ['수기검수', 'OCR 오류', 'manual confirmation']],
+  ['dispute-integration', 'Hot Document', '핫 도큐먼트', '쟁점 판단에 특히 중요한 문서', '중요하지만 원본대조와 인용안전을 별도로 확인해야 합니다.', '증거관리', 'intermediate', ['Materiality', '직접인용 가능', '인용안전등급']],
+  ['dispute-integration', 'Chronology', '크로놀로지', '사건이나 자료를 시간순으로 배열한 흐름표', '타임라인보다 판단 근거와 출처까지 붙여 정리할 때 씁니다.', '기록정리', 'intermediate', ['타임라인', '출처추적', '쟁점']],
+  ['dispute-integration', 'Source System', '소스 시스템', '자료가 원래 생성되거나 보관된 시스템', '파일이 어디서 왔는지와 메타데이터 신뢰도를 판단합니다.', '원본/출처', 'intermediate', ['출처추적', '메타데이터', 'Custodian']],
+  ['dispute-integration', 'Access Log', '액세스 로그', '누가 언제 자료나 시스템에 접근했는지의 기록', '자료 변경이나 열람 가능성을 판단하는 보조 단서입니다.', '기록정리', 'intermediate', ['Audit Trail', '접근권한', '변경이력']],
+  ['dispute-integration', 'Audit Trail', '오딧 트레일', '작업, 접근, 변경의 순서를 남긴 추적 기록', '나중에 왜 그렇게 되었는지 되짚는 근거가 됩니다.', '기록정리', 'advanced', ['Access Log', 'Chain of Custody', '변경이력']],
+  ['dispute-integration', 'Hash Verification', '해시 베리피케이션', '파일 해시를 다시 계산해 동일성을 확인하는 절차', '원본과 제출본이 같은지 검증하는 데 씁니다.', '원본/출처', 'intermediate', ['파일해시', '원본대조', 'Authentication']],
+  ['dispute-integration', 'Confidentiality Designation', '컨피덴셜리티 디자인네이션', '자료의 공개 제한 수준을 표시하는 분류', '민감도와 공유 범위를 분리해서 관리합니다.', '프라이버시', 'advanced', ['민감정보', '접근권한', 'Privilege Review']],
+  ['ai-command', 'Confidence', '컨피던스', '판단이나 답변을 얼마나 믿을 수 있는지의 확신도', '근거 수준과 검증 여부를 분리해서 말할 때 씁니다.', 'Review / QA', 'intermediate', ['Evidence Ladder', 'Grounding', 'Provenance']],
+  ['development', 'ACID', '애시드', '트랜잭션 안정성을 설명하는 Atomicity, Consistency, Isolation, Durability 묶음', 'DB 변경이 안전하게 처리되는지 판단할 때 쓰는 핵심 약어입니다.', 'Data / Schema', 'advanced', ['Transaction', 'Atomicity', 'Consistency']],
+  ['development', 'Action', '액션', '상태를 바꾸라고 전달하는 의도나 명령 객체', 'Reducer나 상태 머신에서 다음 상태를 결정하는 입력입니다.', 'Programming', 'basic', ['Reducer', 'State', 'Transition']],
+  ['development', 'Async', '어싱크', '작업이 끝날 때까지 기다리지 않고 나중에 결과를 받는 실행 방식', '네트워크, 파일, 타이머처럼 시간이 걸리는 작업에서 중요합니다.', 'Runtime', 'intermediate', ['Event Loop', 'Queue', 'Concurrency']],
+  ['development', 'Browser', '브라우저', '웹 앱을 실행하고 렌더링하는 사용자 환경', 'React 앱, PWA, 서비스 워커가 실제로 동작하는 무대입니다.', 'Runtime', 'basic', ['Runtime', 'CORS', 'Service Worker API']],
+  ['development', 'Certificate', '서티피킷', '서버 신원과 암호화 연결을 증명하는 디지털 인증서', 'TLS/HTTPS 연결이 신뢰 가능한지 확인하는 데 쓰입니다.', 'Runtime / Integration', 'intermediate', ['TLS', 'HTTPS', 'Security']],
+  ['development', 'Cursor', '커서', '페이지네이션에서 다음 위치를 가리키는 기준값', 'Offset보다 안정적으로 다음 묶음을 가져올 때 자주 씁니다.', 'Runtime / Integration', 'intermediate', ['Pagination', 'Limit', 'Offset']],
+  ['development', 'Database', '데이터베이스', '구조화된 데이터를 저장하고 조회하는 시스템', '스키마, 인덱스, 쿼리 플랜이 함께 작동합니다.', 'Data / Schema', 'basic', ['Schema', 'Index', 'Query Plan']],
+  ['development', 'Event', '이벤트', '시스템 안에서 발생한 의미 있는 일', '클릭, 저장 완료, 웹훅 수신처럼 흐름을 시작하는 신호입니다.', 'Runtime / Integration', 'basic', ['Webhook', 'Event Loop', 'Queue']],
+  ['development', 'HTTP', '에이치티티피', '웹 클라이언트와 서버가 요청/응답을 주고받는 프로토콜', 'API, 웹훅, 정적 파일 전송의 기본 언어입니다.', 'Runtime / Integration', 'basic', ['Webhook', 'CORS', 'HTTPS']],
+  ['development', 'HTTPS', '에이치티티피에스', 'HTTP에 TLS 암호화를 적용한 보안 통신 방식', '배포된 웹앱과 PWA에서 기본적으로 요구됩니다.', 'Runtime / Integration', 'basic', ['HTTP', 'TLS', 'Certificate']],
+  ['development', 'Lifecycle', '라이프사이클', '객체, 컴포넌트, 프로세스가 생성되고 동작하고 정리되는 흐름', '초기화와 정리 시점을 놓치면 누수나 중복 실행이 생깁니다.', 'Runtime', 'intermediate', ['Memory Leak', 'State', 'Hook']],
+  ['development', 'Limit', '리밋', '한 번에 처리하거나 가져올 수 있는 최대 개수', '페이지네이션과 Rate Limit에서 범위를 제한합니다.', 'Runtime / Integration', 'basic', ['Pagination', 'Cursor', 'Rate Limit']],
+  ['development', 'Offset', '오프셋', '목록에서 몇 번째 위치부터 가져올지 나타내는 숫자', '간단한 페이지네이션에 쓰지만 데이터 변경에 취약할 수 있습니다.', 'Runtime / Integration', 'basic', ['Pagination', 'Cursor', 'Limit']],
+  ['development', 'Optimizer', '옵티마이저', 'DB나 빌드 도구가 더 효율적인 실행 방식을 고르는 구성요소', '쿼리 플랜과 번들 최적화에서 성능을 좌우합니다.', 'Runtime', 'advanced', ['Query Plan', 'Index', 'Performance']],
+  ['development', 'Origin', '오리진', '프로토콜, 도메인, 포트로 정의되는 웹 출처', 'CORS와 브라우저 보안 정책의 기준입니다.', 'Runtime / Integration', 'intermediate', ['CORS', 'Browser', 'Security']],
+  ['development', 'Persistence', '퍼시스턴스', '데이터나 상태가 재시작 후에도 유지되는 성질', '메모리 상태와 저장된 상태를 구분할 때 씁니다.', 'Runtime', 'intermediate', ['Durability', 'LocalStorage', 'Database']],
+  ['development', 'Queue', '큐', '처리할 일을 순서대로 쌓아 두는 대기열', '비동기 작업, 이벤트 루프, 워크 큐의 기본 구조입니다.', 'Runtime', 'basic', ['Event Loop', 'Work Queue', 'Async']],
+  ['development', 'Quota', '쿼터', '사용 가능한 용량이나 호출량의 제한', 'API 호출, 저장소, 사용자별 사용량 제한을 설명합니다.', 'Runtime / Integration', 'intermediate', ['Rate Limit', 'Limit', 'Backoff']],
+  ['development', 'Reference', '레퍼런스', '값 자체가 아니라 값을 가리키는 연결', '참조가 남아 있으면 가비지 컬렉션이 메모리를 회수하지 못할 수 있습니다.', 'Programming', 'intermediate', ['Garbage Collection', 'Memory Leak', 'Resource']],
+  ['development', 'Referential Integrity', '레퍼런셜 인테그리티', '참조 관계가 깨지지 않도록 유지하는 데이터 무결성', 'Foreign Key가 존재하지 않는 레코드를 가리키지 않게 합니다.', 'Data / Schema', 'advanced', ['Foreign Key', 'Primary Key', 'Consistency']],
+  ['development', 'Resource', '리소스', '메모리, 파일, 네트워크 연결처럼 제한된 실행 자원', '열었으면 닫고, 잡았으면 해제해야 누수를 막습니다.', 'Runtime', 'basic', ['Memory Leak', 'Lifecycle', 'Garbage Collection']],
+  ['development', 'Security', '시큐리티', '시스템과 데이터를 허용된 방식으로만 쓰게 보호하는 성질', 'TLS, CORS, 권한, 입력 검증이 함께 작동합니다.', 'Boundary / Safety', 'basic', ['TLS', 'CORS', 'Validation']],
+  ['development', 'Staleness', '스테일니스', '데이터가 최신 Source of Truth보다 오래된 상태', '캐시와 화면 상태가 실제 값과 어긋날 때 발생합니다.', 'Runtime', 'intermediate', ['Cache Invalidation', 'Source of Truth', 'Current Truth']],
+  ['libraries-tools', 'Accessibility', '액세서빌리티', '다양한 사용자가 앱을 이해하고 조작할 수 있게 하는 품질', '색 대비, 키보드 이동, 스크린리더 의미를 확인합니다.', 'Quality Tools', 'basic', ['Lighthouse', 'Browser', 'UI']],
+  ['libraries-tools', 'UI', '유아이', '사용자가 보고 누르고 읽는 화면과 조작 요소', '버튼, 카드, 탭, 입력창처럼 사용 흐름을 만드는 표면입니다.', 'Frontend Frameworks', 'basic', ['Component', 'Accessibility', 'Render']],
+  ['libraries-tools', 'Breaking Change', '브레이킹 체인지', '기존 사용 방식과 호환되지 않는 변경', '버전 업데이트 전 영향 범위와 마이그레이션 필요성을 확인합니다.', 'Package Managers', 'intermediate', ['Semantic Versioning', 'Dependency', 'Migration']],
+  ['libraries-tools', 'Chunk', '청크', '번들을 나눈 개별 파일 조각', '초기 로딩과 캐싱 전략에 영향을 줍니다.', 'Build Tools', 'intermediate', ['Bundle', 'Vite', 'Tree Shaking']],
+  ['libraries-tools', 'Column', '컬럼', '표 데이터에서 세로 방향의 속성 단위', 'DataFrame과 스키마를 읽을 때 기본 단위입니다.', 'Data Tools', 'basic', ['DataFrame', 'Series', 'Schema']],
+  ['libraries-tools', 'Console', '콘솔', '브라우저나 터미널에서 로그와 오류를 확인하는 창', '디버깅의 첫 단서가 자주 나타납니다.', 'Quality Tools', 'basic', ['Browser DevTools', 'Debugging', 'Stack Trace']],
+  ['libraries-tools', 'Debugging', '디버깅', '문제 원인을 찾아 재현하고 수정하는 과정', '증상, 재현 조건, 원인, 검증을 분리해 진행합니다.', 'Quality Tools', 'basic', ['Regression', 'Stack Trace', 'Source Map']],
+  ['libraries-tools', 'Dev Server', '데브 서버', '개발 중 앱을 빠르게 실행하고 갱신하는 서버', 'Vite의 HMR과 로컬 확인 흐름을 담당합니다.', 'Build Tools', 'basic', ['Vite', 'Hot Module Replacement', 'Browser']],
+  ['libraries-tools', 'Formatting', '포매팅', '코드 모양을 일관된 형식으로 정리하는 작업', 'Prettier가 주로 담당하고 의미 변경과 분리해야 합니다.', 'Quality Tools', 'basic', ['Prettier', 'Diff', 'ESLint']],
+  ['libraries-tools', 'Module', '모듈', '코드를 파일이나 기능 단위로 나눈 재사용 단위', 'import/export와 번들링의 기본 단위입니다.', 'Build Tools', 'basic', ['Bundle', 'Dependency', 'Vite']],
+  ['libraries-tools', 'Network Tab', '네트워크 탭', '브라우저 요청과 응답을 확인하는 DevTools 영역', 'API 호출, 정적 파일, 캐시 상태를 분석합니다.', 'Quality Tools', 'basic', ['Browser DevTools', 'HTTP', 'CORS']],
+  ['libraries-tools', 'Performance', '퍼포먼스', '앱이 얼마나 빠르고 부드럽게 반응하는지의 품질', '로딩, 렌더링, 번들 크기, 메모리 사용을 함께 봅니다.', 'Quality Tools', 'intermediate', ['Lighthouse', 'Bundle', 'Memoization']],
+  ['libraries-tools', 'Render', '렌더', '상태와 데이터를 화면 출력으로 바꾸는 과정', 'React에서는 상태 변경이 렌더를 일으키고 실제 DOM 갱신으로 이어집니다.', 'React', 'basic', ['Reconciliation', 'State', 'Component']],
+  ['libraries-tools', 'Reproducibility', '리프로듀서빌리티', '다른 환경에서도 같은 결과를 다시 만들 수 있는 성질', 'Lockfile과 고정된 스크립트가 빌드 재현성을 높입니다.', 'Build Tools', 'intermediate', ['Lockfile', 'package.json', 'Dependency']],
+  ['libraries-tools', 'SSR', '에스에스알', '서버에서 HTML을 먼저 만든 뒤 브라우저에 보내는 렌더링 방식', 'Hydration과 함께 동작하며 초기 표시 속도와 SEO에 영향을 줍니다.', 'Frontend Frameworks', 'advanced', ['Hydration', 'React', 'Render']],
+  ['libraries-tools', 'Stack Trace', '스택 트레이스', '오류가 어떤 함수 호출 경로에서 발생했는지 보여주는 기록', 'Source Map과 함께 원본 코드 위치를 추적합니다.', 'Quality Tools', 'intermediate', ['Debugging', 'Source Map', 'Console']],
+  ['libraries-tools', 'Unit Test', '유닛 테스트', '작은 함수나 컴포넌트 단위를 독립적으로 검증하는 테스트', '빠른 회귀 확인과 로직 안정성에 유용합니다.', 'Quality Tools', 'basic', ['Vitest', 'Regression', 'Fixture']],
+  ['libraries-tools', 'Virtual DOM', '버추얼 돔', '실제 DOM을 직접 바꾸기 전 React가 비교에 쓰는 가벼운 UI 표현', 'Reconciliation 과정에서 변경 차이를 계산하는 데 쓰입니다.', 'React', 'advanced', ['Reconciliation', 'Render', 'Diff']],
+] as const
+
+const expertTerms = expertSeedTerms.map(
+  ([deck, term, pronunciation, koreanMeaning, simpleMeaning, category, difficulty, relatedTerms]) =>
+    makeExpertTerm({
+      id: `expert-${deck}-${slugify(term)}`,
+      deck,
+      term,
+      pronunciation,
+      koreanMeaning,
+      simpleMeaning,
+      category,
+      difficulty,
+      relatedTerms: relatedTerms ? [...relatedTerms] : undefined,
+    }),
+)
+
 const addedTerms = [
   ...aiCommandTerms,
   ...librariesToolTerms,
   ...joovisArchitectureTerms,
   ...disputeTerms,
+  ...expertTerms,
 ] satisfies RawDevTerm[]
 
 const buildResult = buildDataset(legacyTerms, addedTerms)
@@ -1394,6 +1581,51 @@ function makeDisputeTerm(
   }
 }
 
+function makeExpertTerm(
+  term: Pick<
+    RawDevTerm,
+    'id' | 'term' | 'pronunciation' | 'koreanMeaning' | 'simpleMeaning' | 'category' | 'relatedTerms'
+  > & {
+    deck: DeckId
+    difficulty: Difficulty
+  },
+): RawDevTerm {
+  const domainLabel = getDomainLabel(term.deck)
+  return {
+    ...term,
+    domainLabel,
+    joovisUsage:
+      term.deck === 'dispute-integration'
+        ? undefined
+        : `${term.term}은 ${domainLabel} Deck에서 설계, 검증, 리뷰를 더 정확하게 말하기 위한 전문가 용어입니다.`,
+    disputeUsage:
+      term.deck === 'dispute-integration'
+        ? `${term.term}은 증거관리, 쟁점정리, 원본대조, 인용안전 판단을 분리해서 기록할 때 쓰는 일반 교육용 용어입니다.`
+        : undefined,
+    checkQuestion: `${term.term}을 실제로 쓸 때 무엇을 기준으로 판단하고, 어떤 관련 용어와 함께 확인해야 하나요?`,
+    codexPromptExample:
+      term.deck === 'dispute-integration'
+        ? `이 학습 데이터에서 ${term.term} 설명이 일반적이고 개인정보 없는 교육용 표현인지 점검해줘.`
+        : `${term.term} 관점으로 현재 구현이나 설명에서 작동 원리, 위험, 검증 기준을 분리해서 설명해줘.`,
+    gptPromptExample:
+      term.deck === 'ai-command'
+        ? `${term.term} 기준으로 내 요청을 목적, 경계, 출력 형식, 검증 기준으로 다시 써줘.`
+        : undefined,
+    badExpression:
+      term.deck === 'ai-command'
+        ? '이거 잘 되게 해줘.'
+        : term.deck === 'dispute-integration'
+          ? '이 자료 중요한 것 같아.'
+          : undefined,
+    goodExpression:
+      term.deck === 'ai-command'
+        ? `${term.term}을 기준으로 목표, 입력 자료, 금지 경계, 완료 기준, 검증 방법을 분리해서 처리해줘.`
+        : term.deck === 'dispute-integration'
+          ? `${term.term} 관점에서 원본대조 필요 여부, 연결되는 쟁점, 인용 가능성, 민감정보 포함 여부를 분리해서 판단해줘.`
+          : undefined,
+  }
+}
+
 function buildDataset(legacy: RawDevTerm[], additions: RawDevTerm[]) {
   const termsByKey = new Map<string, DevTerm>()
   const stats = {
@@ -1456,21 +1688,172 @@ function enrichTerm(term: RawDevTerm): DevTerm {
     joovisUsage: term.joovisUsage,
     codexPromptExample: term.codexPromptExample,
   }
+  const withDepth: DevTerm = {
+    ...base,
+    mentalModel: base.mentalModel ?? buildMentalModel(base),
+    whyItMatters: base.whyItMatters ?? buildWhyItMatters(base),
+    withoutIt: base.withoutIt ?? buildWithoutIt(base),
+    realWorkflow: base.realWorkflow ?? buildRealWorkflow(base),
+    mechanism: base.mechanism ?? buildMechanism(base),
+    usagePattern: base.usagePattern ?? buildUsagePattern(base),
+    commonPitfall: base.commonPitfall ?? buildCommonPitfall(base),
+    expertNote: base.expertNote ?? buildExpertNote(base),
+    relatedTerms: mergeRelatedTerms(base.relatedTerms, getDefaultRelatedTerms(base)),
+  }
 
   if (deck === 'ai-command') {
     return {
-      ...base,
-      badExpression: base.badExpression ?? '이거 좀 봐줘.',
+      ...withDepth,
+      badExpression: withDepth.badExpression ?? '이거 좀 봐줘.',
       goodExpression:
-        base.goodExpression ??
+        withDepth.goodExpression ??
         '현재 상태, 변경 파일, 열린 경계, 금지 경계, 검증 결과, 다음 단계만 분리해서 판정해줘.',
       gptPromptExample:
-        base.gptPromptExample ??
+        withDepth.gptPromptExample ??
         '모호한 표현을 줄이고 목표, 경계, 검증 기준을 분리해서 다시 써줘.',
     }
   }
 
-  return base
+  return withDepth
+}
+
+function buildMentalModel(term: DevTerm) {
+  switch (term.deck) {
+    case 'ai-command':
+      return `${term.term}은 AI 작업실 입구에 붙은 작업표처럼 생각하면 됩니다. 표에는 목표, 재료, 금지 구역, 통과 기준이 적혀 있고, AI는 그 표를 보며 어디까지 들어가고 어디서 멈춰야 하는지 판단합니다.`
+    case 'development':
+      return `시스템을 건물로 보면 ${term.term}은 방, 복도, 배관, 출입문 중 하나의 역할을 합니다. 데이터가 어느 문으로 들어와 어떤 방을 지나고 어디에서 막히는지 공간적으로 따라가면 개념이 훨씬 선명해집니다.`
+    case 'libraries-tools':
+      return `${term.term}은 작업대 위의 전문 공구처럼 보면 됩니다. 망치인지, 자인지, 전동드릴인지 알아야 제대로 쓰듯이 이 도구가 빌드, 화면, 데이터, 검증 중 어느 문제를 해결하는지 먼저 잡아야 합니다.`
+    case 'joovis-architecture':
+      return `${term.term}은 관제실 지도 위의 구역 표시처럼 이해하면 좋습니다. 어떤 구역은 현재 진실을 보관하고, 어떤 구역은 검증 대기열이며, 어떤 문은 통과 전 리뷰가 필요한 경계입니다.`
+    case 'dispute-integration':
+      return `${term.term}은 증거 보관실의 라벨과 동선처럼 보면 됩니다. 원본 선반, 제출본 선반, 검토 대기함, 민감정보 잠금 구역을 분리해 두어야 자료가 섞이지 않습니다.`
+  }
+}
+
+function buildWhyItMatters(term: DevTerm) {
+  switch (term.deck) {
+    case 'ai-command':
+      return `${term.term}이 필요한 이유는 AI가 빈칸을 자연스럽게 메우려 하기 때문입니다. 기준을 먼저 주면 추측이 줄고, 답변을 나중에 검증하거나 고치기도 쉬워집니다.`
+    case 'development':
+      return `${term.term}이 중요한 이유는 버그가 대부분 "어디서 무엇이 바뀌었는지"를 놓칠 때 생기기 때문입니다. 이 개념은 원인 위치와 영향 범위를 좁히는 손잡이가 됩니다.`
+    case 'libraries-tools':
+      return `${term.term}을 이해하면 도구를 외워서 쓰는 것이 아니라 문제에 맞춰 선택할 수 있습니다. 특히 설정 오류, 버전 충돌, 빌드 실패가 났을 때 어디를 봐야 하는지 알려줍니다.`
+    case 'joovis-architecture':
+      return `${term.term}은 JOOVIS 작업이 감이 아니라 구조로 이어지게 만들기 때문에 중요합니다. 현재 상태, 변경 경계, 다음 판단자가 받을 정보가 분리되면 작업이 덜 흔들립니다.`
+    case 'dispute-integration':
+      return `${term.term}이 필요한 이유는 자료가 많아질수록 중요도, 출처, 원본성, 인용 가능성이 쉽게 섞이기 때문입니다. 분리해서 기록해야 나중에 안전하게 검토할 수 있습니다.`
+  }
+}
+
+function buildWithoutIt(term: DevTerm) {
+  switch (term.deck) {
+    case 'ai-command':
+      return `${term.term}이 없으면 AI는 사용자의 의도보다 그럴듯한 평균 답변을 우선할 수 있습니다. 그러면 금지된 범위를 건드리거나, 검증되지 않은 결론을 확정처럼 말할 위험이 커집니다.`
+    case 'development':
+      return `${term.term}을 모르고 작업하면 증상만 고치고 원인은 남길 수 있습니다. 작은 수정이 다른 모듈, 데이터, 런타임 흐름에 어떤 영향을 주는지 놓치기 쉽습니다.`
+    case 'libraries-tools':
+      return `${term.term}을 모르고 쓰면 오류가 났을 때 "라이브러리 문제"처럼 뭉뚱그리게 됩니다. 실제로는 설정, 타입, 번들, 런타임, 브라우저 중 한 지점의 문제일 수 있습니다.`
+    case 'joovis-architecture':
+      return `${term.term}이 없으면 작업 단위가 말로만 남고, 누가 무엇을 기준으로 이어받아야 하는지 흐려집니다. 결과적으로 재현, 리뷰, 롤백이 어려워집니다.`
+    case 'dispute-integration':
+      return `${term.term}을 빼면 자료가 "중요해 보임" 같은 감상으로만 남습니다. 원본대조, 민감정보, 쟁점 연결, 직접인용 가능 여부가 분리되지 않아 나중에 위험해질 수 있습니다.`
+  }
+}
+
+function buildRealWorkflow(term: DevTerm) {
+  switch (term.deck) {
+    case 'ai-command':
+      return `실제로는 먼저 ${term.term}을 기준으로 요청을 다시 씁니다. 그다음 입력 자료, 금지 경계, 출력 형식, 검증 방법을 나누고, 마지막에 AI 답변이 그 기준을 지켰는지 확인합니다.`
+    case 'development':
+      return `현장에서는 ${term.term}을 볼 때 관련 파일을 찾고, 입력과 출력 shape를 확인하고, 실패 경로를 재현한 뒤, 작은 수정과 빌드/테스트 검증으로 닫습니다.`
+    case 'libraries-tools':
+      return `작업 흐름은 ${term.term}의 공식 역할을 확인하고, 프로젝트에서 쓰이는 위치를 찾고, 설정과 버전을 본 뒤, 빌드 결과나 브라우저 동작으로 실제 효과를 검증하는 순서입니다.`
+    case 'joovis-architecture':
+      return `JOOVIS 흐름에서는 ${term.term}을 현재 상태 기록, 경계 확인, 변경 실행, 리뷰 게이트, 핸드오프 순서 안에 배치합니다. 그래야 다음 작업자가 같은 지도를 보고 이어갈 수 있습니다.`
+    case 'dispute-integration':
+      return `실제 정리에서는 ${term.term}을 증거목록에 붙이고, 원본대조 필요 여부, 쟁점 연결, 인용 가능성, 민감정보 여부를 별도 칸으로 기록합니다. 최근파일 단서만으로 복사나 제출을 단정하지 않습니다.`
+  }
+}
+
+function buildMechanism(term: DevTerm) {
+  switch (term.deck) {
+    case 'ai-command':
+      return `${term.term}은 AI가 답을 생성하기 전에 목적, 입력, 경계, 완료 기준을 정렬하게 만드는 지휘 장치입니다. 실제로는 모호한 요청을 작은 판단 단위로 쪼개고, 각 단위가 어떤 근거와 검증 조건을 가져야 하는지 고정합니다.`
+    case 'development':
+      return `${term.term}은 코드나 시스템이 실행될 때 데이터, 상태, 의존성이 어떤 순서로 움직이는지 설명하는 개념입니다. 단어를 외우는 것보다 입력이 들어오고 처리되고 실패하거나 성공하는 경로를 따라가야 의미가 잡힙니다.`
+    case 'libraries-tools':
+      return `${term.term}은 도구가 내부에서 어떤 문제를 대신 해결해 주는지 이해해야 쓸 수 있습니다. 설치 명령이나 이름만 외우지 말고 빌드, 런타임, 타입 검사, 브라우저 동작 중 어디에 끼어드는지 봐야 합니다.`
+    case 'joovis-architecture':
+      return `${term.term}은 JOOVIS 안에서 상태, 경계, 검증, 릴레이를 분리해 사고하기 위한 구조 언어입니다. 작동 원리는 현재 진실과 변경 경계를 나눈 뒤 다음 판단자가 같은 기준으로 이어받게 하는 것입니다.`
+    case 'dispute-integration':
+      return `${term.term}은 자료를 감정적으로 중요하다고 보는 대신 원본성, 출처, 쟁점 연결, 인용 가능성, 민감정보 위험으로 나눠 다루게 하는 증거관리 개념입니다. 이 설명은 일반 교육용이며 실제 사건 사실을 포함하지 않습니다.`
+  }
+}
+
+function buildUsagePattern(term: DevTerm) {
+  switch (term.deck) {
+    case 'ai-command':
+      return `프롬프트에서 ${term.term}을 쓸 때는 "무엇을 해줘"보다 "무엇을 기준으로 판단하고, 무엇은 하지 말고, 어떤 형식으로 검증 결과를 내라"까지 같이 말합니다.`
+    case 'development':
+      return `코드 리뷰에서는 ${term.term}이 입력, 출력, 상태 변화, 예외 처리, 테스트 중 어디에 영향을 주는지 확인합니다. 버그를 찾을 때도 이 순서로 보면 놓치는 부분이 줄어듭니다.`
+    case 'libraries-tools':
+      return `${term.term}을 사용할 때는 공식 역할, 프로젝트 안의 위치, 빌드 결과, 브라우저나 Node.js 런타임에 미치는 영향을 함께 확인합니다.`
+    case 'joovis-architecture':
+      return `JOOVIS 문맥에서는 ${term.term}을 단독 명칭이 아니라 LOCK, Current Truth, Review Gate, Handoff Packet 같은 경계 언어와 함께 써서 작업 흐름을 통제합니다.`
+    case 'dispute-integration':
+      return `분쟁통합 문맥에서는 ${term.term}을 증거목록, 쟁점태그, 원본대조, 직접인용 가능 여부와 연결해 기록합니다. 최근파일이나 추정만으로 사실을 단정하지 않습니다.`
+  }
+}
+
+function buildCommonPitfall(term: DevTerm) {
+  switch (term.deck) {
+    case 'ai-command':
+      return `${term.term}을 말하면서도 출력 형식, 금지 경계, 검증 기준을 빼면 AI가 넓게 추측할 수 있습니다. 그래서 좋은 명령은 항상 경계와 판정 기준을 같이 둡니다.`
+    case 'development':
+      return `${term.term}을 이름만 알고 실제 실행 경로를 보지 않으면 원인을 잘못 짚기 쉽습니다. 특히 비동기, 캐시, 상태 변경, 의존성 문제는 겉으로 보이는 증상과 실제 원인이 다를 수 있습니다.`
+    case 'libraries-tools':
+      return `${term.term}을 "설치하면 해결되는 것"으로만 이해하면 버전, 설정, 빌드 출력, 브라우저 호환성 문제를 놓칩니다. 도구가 어느 단계에서 일하는지 확인해야 합니다.`
+    case 'joovis-architecture':
+      return `${term.term}을 멋있는 이름처럼만 쓰면 작업 경계가 흐려집니다. 반드시 어떤 파일, 상태, 판단, 검증을 보호하거나 전달하는지까지 붙여야 합니다.`
+    case 'dispute-integration':
+      return `${term.term}을 근거 없이 "중요함"으로만 표시하면 위험합니다. 원본대조 전 직접인용, 민감정보 미가림, 쟁점과 무관한 자료 확대를 피해야 합니다.`
+  }
+}
+
+function buildExpertNote(term: DevTerm) {
+  const related = term.relatedTerms?.slice(0, 4).join(', ')
+  return related
+    ? `${term.term}은 단독 암기보다 ${related}와 함께 연결해서 이해해야 실제 보고서나 리뷰에서 쓸 수 있습니다.`
+    : `${term.term}은 뜻만 외우기보다 어떤 판단을 가능하게 하고 어떤 실수를 막는지까지 연결해서 익혀야 합니다.`
+}
+
+function getDefaultRelatedTerms(term: DevTerm) {
+  switch (term.deck) {
+    case 'ai-command':
+      return ['Context', 'Scope', 'Boundary', 'Acceptance Criteria']
+    case 'development':
+      return ['Interface', 'Schema', 'Runtime', 'Invariant']
+    case 'libraries-tools':
+      return ['Dependency', 'Runtime', 'Build', 'Validation']
+    case 'joovis-architecture':
+      return ['Current Truth', 'Boundary Ledger', 'Review Gate', 'State Capsule']
+    case 'dispute-integration':
+      return ['원본대조', '출처추적', '인용안전등급', '민감정보']
+  }
+}
+
+function mergeRelatedTerms(primary: string[] | undefined, fallback: string[]) {
+  const seen = new Set<string>()
+  return [...(primary ?? []), ...fallback].filter((term) => {
+    const key = normalizeTerm(term)
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
 }
 
 function inferDeck(term: RawDevTerm): DeckId {

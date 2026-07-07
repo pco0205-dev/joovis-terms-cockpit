@@ -4,6 +4,7 @@ const FAVORITES_KEY = 'joovis_terms_cockpit_favorites'
 const REVIEW_STATUS_KEY = 'joovis_terms_cockpit_review_statuses'
 const ONBOARDING_DISMISSED_KEY = 'joovis_terms_cockpit_onboarding_dismissed'
 const RANDOM_PRACTICE_COUNTS_KEY = 'joovis_terms_cockpit_random_practice_counts'
+const RANDOM_PRACTICE_HISTORY_KEY = 'joovis_terms_cockpit_random_practice_history'
 
 export function loadFavoriteIds() {
   return new Set(readJson<string[]>(FAVORITES_KEY, []))
@@ -37,6 +38,16 @@ export function loadRandomPracticeCount(dateKey: string) {
 export function saveRandomPracticeCount(dateKey: string, count: number) {
   const counts = readJson<Record<string, number>>(RANDOM_PRACTICE_COUNTS_KEY, {})
   writeJson(RANDOM_PRACTICE_COUNTS_KEY, { ...counts, [dateKey]: count })
+}
+
+export function loadRandomPracticeHistory(dateKey: string) {
+  const histories = readJson<Record<string, string[]>>(RANDOM_PRACTICE_HISTORY_KEY, {})
+  return histories[dateKey] ?? []
+}
+
+export function saveRandomPracticeHistory(dateKey: string, termIds: string[]) {
+  const histories = readJson<Record<string, string[]>>(RANDOM_PRACTICE_HISTORY_KEY, {})
+  writeJson(RANDOM_PRACTICE_HISTORY_KEY, { ...histories, [dateKey]: termIds })
 }
 
 function readJson<T>(key: string, fallback: T): T {

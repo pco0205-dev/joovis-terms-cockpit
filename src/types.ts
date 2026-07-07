@@ -56,6 +56,14 @@ export type DevTerm = {
   disputeUsage?: string
   evidenceCaution?: string
   privacyWarning?: string
+  mechanism?: string
+  usagePattern?: string
+  commonPitfall?: string
+  expertNote?: string
+  mentalModel?: string
+  whyItMatters?: string
+  withoutIt?: string
+  realWorkflow?: string
   relatedTerms?: string[]
 }
 

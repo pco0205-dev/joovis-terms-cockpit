@@ -10,14 +10,17 @@ import {
   loadFavoriteIds,
   loadOnboardingDismissed,
   loadRandomPracticeCount,
+  loadRandomPracticeHistory,
   loadReviewStatuses,
   saveFavoriteIds,
   saveOnboardingDismissed,
   saveRandomPracticeCount,
+  saveRandomPracticeHistory,
   saveReviewStatuses,
 } from './storage'
 
 type Mode = 'today' | 'random' | 'review' | 'search'
+type ViewState = { deck: DeckId; mode: Mode }
 
 const modes: Array<{ id: Mode; label: string; description: string }> = [
   { id: 'today', label: '오늘', description: '하루 1개' },
@@ -36,6 +39,7 @@ const guideItems = [
 function App() {
   const [activeDeck, setActiveDeck] = useState<DeckId>('ai-command')
   const [activeMode, setActiveMode] = useState<Mode>('today')
+  const [viewHistory, setViewHistory] = useState<ViewState[]>([])
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [searchAllDecks, setSearchAllDecks] = useState(false)
@@ -55,6 +59,15 @@ function App() {
       ]),
     ) as Record<DeckId, number>,
   )
+  const [randomPracticeHistories, setRandomPracticeHistories] = useState<Record<DeckId, string[]>>(
+    () =>
+      Object.fromEntries(
+        deckDefinitions.map((deck) => [
+          deck.id,
+          loadRandomPracticeHistory(getRandomPracticeKey(todayDateKey, deck.id)),
+        ]),
+      ) as Record<DeckId, string[]>,
+  )
 
   const activeDeckDefinition = deckDefinitions.find((deck) => deck.id === activeDeck)!
   const activeDeckTerms = useMemo(
@@ -68,11 +81,17 @@ function App() {
   )
   const randomTerm = useMemo(() => {
     const selectedId = randomTermIds[activeDeck]
+    const unseenTerms = getUnseenTerms(activeDeckTerms, randomPracticeHistories[activeDeck] ?? [])
     return (
       activeDeckTerms.find((term) => term.id === selectedId) ??
-      pickRandomTerm(activeDeckTerms, null, `random-${activeDeck}-${todayDateKey}`)
+      pickRandomTerm(unseenTerms.length > 0 ? unseenTerms : activeDeckTerms, null, `random-${activeDeck}-${todayDateKey}`)
     )
-  }, [activeDeck, activeDeckTerms, randomTermIds, todayDateKey])
+  }, [activeDeck, activeDeckTerms, randomPracticeHistories, randomTermIds, todayDateKey])
+  const randomSeenCount = Math.min(
+    randomPracticeHistories[activeDeck]?.length ?? 0,
+    activeDeckTerms.length,
+  )
+  const randomRemainingCount = Math.max(activeDeckTerms.length - randomSeenCount, 0)
 
   const deckFavoriteCount = activeDeckTerms.filter((term) => favoriteIds.has(term.id)).length
   const deckKnownCount = activeDeckTerms.filter(
@@ -111,6 +130,15 @@ function App() {
           term.gptPromptExample,
           term.codexPromptExample,
           term.checkQuestion,
+          term.mentalModel,
+          term.whyItMatters,
+          term.withoutIt,
+          term.realWorkflow,
+          term.mechanism,
+          term.usagePattern,
+          term.commonPitfall,
+          term.expertNote,
+          term.relatedTerms?.join(' '),
           term.domainLabel,
         ]
           .filter(Boolean)
@@ -121,8 +149,43 @@ function App() {
     })
   }, [availableCategories, query, searchSourceTerms, selectedCategory])
 
+  const rememberCurrentView = () => {
+    setViewHistory((current) => {
+      const nextView = { deck: activeDeck, mode: activeMode }
+      const previousView = current[current.length - 1]
+      if (previousView?.deck === nextView.deck && previousView.mode === nextView.mode) {
+        return current
+      }
+      return [...current, nextView].slice(-20)
+    })
+  }
+
   const selectDeck = (deckId: DeckId) => {
+    if (deckId !== activeDeck) {
+      rememberCurrentView()
+    }
     setActiveDeck(deckId)
+    setSelectedCategory('All')
+    setExpandedTermId(null)
+    setQuery('')
+  }
+
+  const selectMode = (modeId: Mode) => {
+    if (modeId !== activeMode) {
+      rememberCurrentView()
+      setActiveMode(modeId)
+      setExpandedTermId(null)
+    }
+  }
+
+  const goBack = () => {
+    const previousView = viewHistory[viewHistory.length - 1]
+    if (!previousView) {
+      return
+    }
+    setViewHistory((current) => current.slice(0, -1))
+    setActiveDeck(previousView.deck)
+    setActiveMode(previousView.mode)
     setSelectedCategory('All')
     setExpandedTermId(null)
     setQuery('')
@@ -155,11 +218,26 @@ function App() {
   }
 
   const showNextRandomTerm = () => {
-    const nextTerm = pickRandomTerm(activeDeckTerms, randomTerm.id)
+    const practiceKey = getRandomPracticeKey(todayDateKey, activeDeck)
+    const currentHistory = randomPracticeHistories[activeDeck] ?? []
+    const historyWithCurrent = currentHistory.includes(randomTerm.id)
+      ? currentHistory
+      : [...currentHistory, randomTerm.id]
+    const unseenTerms = getUnseenTerms(activeDeckTerms, historyWithCurrent)
+    const nextCycleStarted = unseenTerms.length === 0
+    const nextPool = nextCycleStarted
+      ? activeDeckTerms.filter((term) => term.id !== randomTerm.id)
+      : unseenTerms
+    const nextTerm = pickRandomTerm(nextPool.length > 0 ? nextPool : activeDeckTerms, randomTerm.id)
+    const nextHistory = nextCycleStarted ? [nextTerm.id] : [...historyWithCurrent, nextTerm.id]
     setRandomTermIds((current) => ({ ...current, [activeDeck]: nextTerm.id }))
+    setRandomPracticeHistories((current) => {
+      saveRandomPracticeHistory(practiceKey, nextHistory)
+      return { ...current, [activeDeck]: nextHistory }
+    })
     setRandomPracticeCounts((current) => {
       const nextCount = current[activeDeck] + 1
-      saveRandomPracticeCount(getRandomPracticeKey(todayDateKey, activeDeck), nextCount)
+      saveRandomPracticeCount(practiceKey, nextCount)
       return { ...current, [activeDeck]: nextCount }
     })
   }
@@ -176,9 +254,19 @@ function App() {
           <p className="eyebrow">Multi-deck PWA · LocalStorage only</p>
           <h1>JOOVIS Terms Cockpit</h1>
         </div>
-        <button type="button" className="help-button" onClick={() => setIsGuideOpen(true)}>
-          사용법
-        </button>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="back-button"
+            onClick={goBack}
+            disabled={viewHistory.length === 0}
+          >
+            뒤로
+          </button>
+          <button type="button" className="help-button" onClick={() => setIsGuideOpen(true)}>
+            사용법
+          </button>
+        </div>
       </header>
 
       <nav className="deck-nav" aria-label="학습 Deck 선택">
@@ -210,7 +298,7 @@ function App() {
             type="button"
             className={`mode-button ${activeMode === mode.id ? 'active' : ''}`}
             aria-pressed={activeMode === mode.id}
-            onClick={() => setActiveMode(mode.id)}
+            onClick={() => selectMode(mode.id)}
           >
             <span>{mode.label}</span>
             <small>{mode.description}</small>
@@ -240,11 +328,17 @@ function App() {
       {activeMode === 'random' && (
         <ModePanel title="랜덤 연습" subtitle="버튼을 누르면 이 Deck 안에서 새 용어로 바뀝니다.">
           <div className="random-controls">
-            <span>오늘 랜덤 연습: {randomPracticeCounts[activeDeck]}개</span>
+            <span>
+              오늘 랜덤 연습: {randomPracticeCounts[activeDeck]}개 · 남은 새 카드:{' '}
+              {randomRemainingCount}개
+            </span>
             <button type="button" className="primary-action" onClick={showNextRandomTerm}>
               다음 랜덤 용어
             </button>
           </div>
+          <p className="random-cycle-note">
+            이 Deck의 카드를 한 바퀴 보기 전까지 같은 용어는 다시 나오지 않습니다.
+          </p>
           <StudyCard
             term={randomTerm}
             isFavorite={favoriteIds.has(randomTerm.id)}
@@ -260,7 +354,7 @@ function App() {
           {reviewTerms.length === 0 ? (
             <div className="empty-state-card">
               <p>다시 볼 용어가 없습니다. 랜덤 연습에서 모르는 용어를 '다시 보기'로 표시하세요.</p>
-              <button type="button" className="primary-action" onClick={() => setActiveMode('random')}>
+              <button type="button" className="primary-action" onClick={() => selectMode('random')}>
                 랜덤 연습으로 가기
               </button>
             </div>
@@ -460,6 +554,8 @@ function StudyCard({
       <DetailBlock label={getUsageLabel(term)} tone="usage">
         {getUsageText(term)}
       </DetailBlock>
+      <ConceptMapBlock term={term} />
+      <DeepDiveBlock term={term} />
       <DetailBlock label="확인 질문" tone="question">
         {term.checkQuestion}
       </DetailBlock>
@@ -517,6 +613,8 @@ function CompactTermCard({
           <DetailBlock label={getUsageLabel(term)} tone="usage">
             {getUsageText(term)}
           </DetailBlock>
+          <ConceptMapBlock term={term} />
+          <DeepDiveBlock term={term} />
           <DetailBlock label="확인 질문" tone="question">
             {term.checkQuestion}
           </DetailBlock>
@@ -557,7 +655,7 @@ function StatusBadges({ isFavorite, reviewStatus }: StatusBadgesProps) {
 
 type DetailBlockProps = {
   label: string
-  tone: 'usage' | 'question' | 'expression' | 'caution'
+  tone: 'usage' | 'question' | 'expression' | 'caution' | 'mechanism' | 'mental'
   children: string
 }
 
@@ -567,6 +665,74 @@ function DetailBlock({ label, tone, children }: DetailBlockProps) {
       <span>{label}</span>
       <p>{children}</p>
     </div>
+  )
+}
+
+function ConceptMapBlock({ term }: { term: DevTerm }) {
+  if (!term.mentalModel && !term.whyItMatters && !term.withoutIt && !term.realWorkflow) {
+    return null
+  }
+
+  return (
+    <section className="concept-map-block" aria-label={`${term.term} 개념 지도`}>
+      {term.mentalModel && (
+        <DetailBlock label="머릿속 그림" tone="mental">
+          {term.mentalModel}
+        </DetailBlock>
+      )}
+      {term.whyItMatters && (
+        <DetailBlock label="왜 필요한가" tone="mental">
+          {term.whyItMatters}
+        </DetailBlock>
+      )}
+      {term.withoutIt && (
+        <DetailBlock label="없으면 생기는 문제" tone="mental">
+          {term.withoutIt}
+        </DetailBlock>
+      )}
+      {term.realWorkflow && (
+        <DetailBlock label="현장 흐름" tone="mental">
+          {term.realWorkflow}
+        </DetailBlock>
+      )}
+    </section>
+  )
+}
+
+function DeepDiveBlock({ term }: { term: DevTerm }) {
+  return (
+    <section className="deep-dive-block" aria-label={`${term.term} 심화 설명`}>
+      {term.mechanism && (
+        <DetailBlock label="작동 원리" tone="mechanism">
+          {term.mechanism}
+        </DetailBlock>
+      )}
+      {term.usagePattern && (
+        <DetailBlock label="실전 활용" tone="mechanism">
+          {term.usagePattern}
+        </DetailBlock>
+      )}
+      {term.commonPitfall && (
+        <DetailBlock label="자주 하는 오해" tone="mechanism">
+          {term.commonPitfall}
+        </DetailBlock>
+      )}
+      {term.expertNote && (
+        <DetailBlock label="전문가 메모" tone="mechanism">
+          {term.expertNote}
+        </DetailBlock>
+      )}
+      {term.relatedTerms && term.relatedTerms.length > 0 && (
+        <div className="related-terms" aria-label={`${term.term} 관련 용어`}>
+          <span>같이 볼 용어</span>
+          <div>
+            {term.relatedTerms.map((relatedTerm) => (
+              <span key={relatedTerm}>{relatedTerm}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -722,6 +888,11 @@ function pickRandomTerm(terms: DevTerm[], currentId: string | null, seed?: strin
     nextTerm = terms[Math.floor(Math.random() * terms.length)]
   }
   return nextTerm
+}
+
+function getUnseenTerms(terms: DevTerm[], seenTermIds: string[]) {
+  const seen = new Set(seenTermIds)
+  return terms.filter((term) => !seen.has(term.id))
 }
 
 function getRandomPracticeKey(dateKey: string, deckId: DeckId) {

@@ -1603,6 +1603,464 @@ const aiExpressionTerms = [
   ),
 ] satisfies RawDevTerm[]
 
+type ResearchPromptSeed = {
+  term: string
+  pronunciation: string
+  koreanMeaning: string
+  simpleMeaning: string
+  useCase: string
+  mechanism: string
+  caution: string
+  researchBasis: string
+  goodExpressionKr: string
+  goodExpressionEn: string
+  badExpression?: string
+  relatedTerms: string[]
+  difficulty?: Difficulty
+}
+
+const researchPromptTerms = [
+  makeResearchPromptTerm({
+    term: 'Chain-of-Thought Prompting',
+    pronunciation: '체인 오브 쏘트 프롬프팅',
+    koreanMeaning: '중간 추론 단계를 유도하는 프롬프트 기법',
+    simpleMeaning:
+      '복잡한 문제에서 바로 답을 내지 않고, 필요한 판단 단계를 거쳐 결론을 내리게 하는 방식입니다.',
+    useCase: '수학, 원인 분석, 코드 리뷰처럼 한 번에 답하면 실수하기 쉬운 다단계 문제에 씁니다.',
+    mechanism:
+      '모델의 출력을 결론 하나로 압축하지 않고 중간 판단 공간을 만들어 줍니다. 그래서 조건 확인, 예외 검토, 결론 도출이 한 줄에 섞이지 않습니다.',
+    caution:
+      '모든 작업에서 무조건 좋아지는 것은 아니며, 최신 추론 모델에서는 긴 내부 추론을 요구하기보다 핵심 판단 근거와 검증 요약을 요구하는 편이 안전합니다.',
+    researchBasis:
+      'Wei et al. 2022는 Chain-of-Thought 예시가 산술, 상식, 상징 추론 벤치마크에서 성능을 높일 수 있음을 보고했습니다. https://arxiv.org/abs/2201.11903',
+    goodExpressionKr:
+      '복잡한 문제라면 바로 결론을 내리지 말고, 필요한 중간 판단 단계를 짧게 나눈 뒤 최종 답을 명확히 제시해줘.',
+    goodExpressionEn:
+      'For this complex task, break the reasoning into concise intermediate steps, then provide a clear final answer.',
+    relatedTerms: ['Zero-shot CoT', 'Self-Consistency', 'Reasoning Trace Caution'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Zero-shot CoT',
+    pronunciation: '제로샷 씨오티',
+    koreanMeaning: '예시 없이 단계적 사고를 유도하는 프롬프트',
+    simpleMeaning:
+      '예시를 많이 주지 못하는 상황에서 문제를 단계적으로 나눠 생각하게 만드는 가벼운 지시입니다.',
+    useCase: '처음 보는 문제, 빠른 분석, 초안 판단처럼 예시를 준비할 시간이 없을 때 씁니다.',
+    mechanism:
+      '짧은 문장 하나로 모델이 결론 직행 모드에서 단계 분해 모드로 이동하게 만듭니다. 입력을 먼저 구조화하고, 필요한 하위 판단을 만든 뒤 답을 냅니다.',
+    caution:
+      '간단한 사실 확인에는 오히려 장황해질 수 있습니다. 복잡한 추론이 필요한 경우에만 쓰는 것이 좋습니다.',
+    researchBasis:
+      'Kojima et al. 2022는 “Let’s think step by step” 같은 단순 문구가 예시 없이도 다단계 추론을 유도할 수 있음을 보고했습니다. https://arxiv.org/abs/2205.11916',
+    goodExpressionKr: '예시가 없어도 문제를 단계적으로 나눠 생각한 뒤, 최종 답과 확인할 점을 분리해서 알려줘.',
+    goodExpressionEn:
+      'Think through the problem step by step, then separate the final answer from the checks that still matter.',
+    relatedTerms: ['Chain-of-Thought Prompting', 'Reasoning Budget', 'Output Contract'],
+    difficulty: 'intermediate',
+  }),
+  makeResearchPromptTerm({
+    term: 'Self-Consistency',
+    pronunciation: '셀프 컨시스턴시',
+    koreanMeaning: '여러 추론 경로 중 가장 일관된 답을 고르는 방식',
+    simpleMeaning:
+      '한 가지 답변만 믿지 않고 여러 가능한 풀이를 비교해 반복적으로 모이는 결론을 찾는 방법입니다.',
+    useCase: '정답이 하나여야 하는 계산, 원인 추정, 분류, 리스크 판정에서 불안정한 답을 줄일 때 씁니다.',
+    mechanism:
+      '모델이 한 번에 고른 첫 경로가 틀릴 수 있다는 전제에서 출발합니다. 여러 경로를 만들고, 서로 충돌하는 부분을 버린 뒤 가장 안정적인 결론을 선택합니다.',
+    caution:
+      '토큰과 시간이 더 듭니다. 창의적 글쓰기처럼 여러 답이 모두 가능한 작업에는 “정답 투표”처럼 쓰면 안 됩니다.',
+    researchBasis:
+      'Wang et al. 2022는 다양한 reasoning path를 샘플링한 뒤 가장 일관된 답을 고르는 Self-Consistency가 CoT 성능을 개선한다고 보고했습니다. https://arxiv.org/abs/2203.11171',
+    goodExpressionKr:
+      '가능한 풀이 경로를 3개까지 비교하고, 서로 충돌하는 부분을 표시한 뒤 가장 일관된 결론만 최종 답으로 제시해줘.',
+    goodExpressionEn:
+      'Compare up to three plausible reasoning paths, mark conflicts, and return only the most consistent final conclusion.',
+    relatedTerms: ['Chain-of-Thought Prompting', 'Verifier Pass', 'Answer Calibration'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Least-to-Most Prompting',
+    pronunciation: '리스트 투 모스트 프롬프팅',
+    koreanMeaning: '쉬운 하위 문제부터 순서대로 푸는 프롬프트 기법',
+    simpleMeaning:
+      '큰 문제를 바로 풀지 않고 가장 쉬운 조각부터 풀어서 다음 조각의 입력으로 넘기는 방식입니다.',
+    useCase: '요구사항 분석, 긴 오류 해결, 복합 로직 구현처럼 앞 단계 결과가 뒤 단계의 재료가 되는 작업에 씁니다.',
+    mechanism:
+      '문제를 작은 계단으로 바꾸면 모델이 한 번에 너무 많은 조건을 들고 있지 않아도 됩니다. 이전 하위 답이 다음 하위 문제의 발판이 됩니다.',
+    caution:
+      '분해가 잘못되면 뒤 단계가 모두 틀어집니다. 처음에 하위 문제 목록 자체를 검토하게 해야 합니다.',
+    researchBasis:
+      'Zhou et al. 2022는 복잡한 문제를 단순 하위 문제로 분해해 순서대로 해결하는 Least-to-Most Prompting의 일반화 효과를 보고했습니다. https://arxiv.org/abs/2205.10625',
+    goodExpressionKr:
+      '가장 쉬운 하위 문제부터 순서대로 나누고, 각 단계의 답을 다음 단계의 입력으로 사용해서 최종 결론을 만들어줘.',
+    goodExpressionEn:
+      'Decompose this into the easiest subproblems first, solve them in order, and use each answer as input for the next step.',
+    relatedTerms: ['Decomposed Prompting', 'Task Decomposition', 'Stepwise Refinement'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Decomposed Prompting',
+    pronunciation: '디컴포즈드 프롬프팅',
+    koreanMeaning: '복잡한 작업을 독립 하위 작업으로 분해하는 지시 방식',
+    simpleMeaning:
+      '큰 요청 하나를 여러 작은 요청으로 나누고, 각 요청의 입력과 출력을 분리하는 방식입니다.',
+    useCase: '코드 수정, 문서 검토, 분쟁자료 정리, 긴 보고서 해석처럼 한 번에 처리하면 섞이는 작업에 씁니다.',
+    mechanism:
+      '작업을 독립된 칸으로 나누면 각 칸마다 성공 기준과 실패 기준을 따로 둘 수 있습니다. 그래서 중간 산출물을 검증하고 다음 칸으로 넘길 수 있습니다.',
+    caution:
+      '분해만 하고 통합 검증을 하지 않으면 조각은 맞지만 전체가 틀릴 수 있습니다.',
+    researchBasis:
+      'Khot et al. 2022는 복잡한 문제를 여러 하위 작업과 프롬프트 모듈로 나누는 Decomposed Prompting 접근을 제안했습니다. https://arxiv.org/abs/2210.02406',
+    goodExpressionKr:
+      '이 작업을 독립적인 하위 작업으로 분해하고, 각 하위 작업의 입력, 출력, 검증 기준을 따로 적어줘.',
+    goodExpressionEn:
+      'Decompose this into independent subtasks, and list the input, output, and validation criteria for each subtask.',
+    relatedTerms: ['Least-to-Most Prompting', 'Pipeline', 'Acceptance Criteria'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'ReAct Prompting',
+    pronunciation: '리액트 프롬프팅',
+    koreanMeaning: '추론과 행동을 번갈아 배치하는 프롬프트 패턴',
+    simpleMeaning:
+      '생각만 하거나 도구만 쓰는 것이 아니라, 판단할 부분과 확인할 행동을 교대로 진행하게 하는 방식입니다.',
+    useCase: '파일 확인, 로그 해석, 웹/문서 근거 확인처럼 생각과 외부 확인이 함께 필요한 작업에 씁니다.',
+    mechanism:
+      '모델이 추측으로 빈칸을 메우기 전에 “무엇을 확인해야 하는지”를 정하고, 확인 결과를 다시 판단에 반영합니다. 생각과 관찰이 서로 보정합니다.',
+    caution:
+      '도구 접근이 없는 환경에서 ReAct처럼 지시하면 거짓 확인을 할 수 있습니다. 실제로 확인 가능한 자료와 행동 범위를 명시해야 합니다.',
+    researchBasis:
+      'Yao et al. 2022는 reasoning trace와 task-specific action을 interleave하는 ReAct가 QA, fact verification, interactive decision task에서 효과를 보였다고 보고했습니다. https://arxiv.org/abs/2210.03629',
+    goodExpressionKr:
+      '판단이 필요한 부분과 실제 확인이 필요한 부분을 분리하고, 확인 결과를 다음 판단에 반영하면서 진행해줘.',
+    goodExpressionEn:
+      'Alternate between reasoning and verifiable actions: decide what must be checked, inspect it, then update the next step from the observation.',
+    relatedTerms: ['Tool-Augmented Prompting', 'Source of Truth', 'Verifier Pass'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Tree of Thoughts',
+    pronunciation: '트리 오브 쏘츠',
+    koreanMeaning: '여러 사고 경로를 펼쳐 비교하고 되돌아가는 문제 해결 방식',
+    simpleMeaning:
+      '한 가지 해결책으로 바로 가지 않고 여러 후보 경로를 만든 뒤 평가해서 좋은 경로를 고르는 방식입니다.',
+    useCase: '설계안 선택, 복잡한 디버깅, 전략 수립처럼 처음 선택이 전체 결과를 좌우하는 작업에 씁니다.',
+    mechanism:
+      '생각을 나무의 가지처럼 펼칩니다. 각 가지를 평가하고, 막히면 되돌아가 다른 가지를 타게 해서 단일 직선 추론의 실패를 줄입니다.',
+    caution:
+      '비용이 큰 방법입니다. 단순 질문에는 과합니다. 후보 수, 평가 기준, 중단 조건을 같이 줘야 합니다.',
+    researchBasis:
+      'Yao et al. 2023은 Tree of Thoughts가 planning/search가 필요한 과제에서 여러 reasoning path를 탐색하고 self-evaluate/backtrack하도록 해 성능을 높였다고 보고했습니다. https://arxiv.org/abs/2305.10601',
+    goodExpressionKr:
+      '가능한 해결 경로를 3개 만들고, 각 경로의 장단점과 실패 조건을 평가한 뒤 가장 좋은 경로 하나를 선택해줘.',
+    goodExpressionEn:
+      'Generate three possible solution paths, evaluate the tradeoffs and failure conditions of each, then choose the best path.',
+    relatedTerms: ['Self-Consistency', 'Decision Record', 'Adversarial Check'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Self-Refine',
+    pronunciation: '셀프 리파인',
+    koreanMeaning: '초안, 자기 피드백, 개선안을 반복하는 방식',
+    simpleMeaning:
+      '처음 답을 바로 최종본으로 쓰지 않고 스스로 약점을 찾은 뒤 개선본을 만드는 방법입니다.',
+    useCase: '프롬프트 개선, 보고서 초안, 코드 리뷰 설명, 긴 글 정리처럼 품질을 한 번 더 끌어올릴 때 씁니다.',
+    mechanism:
+      '생성 단계와 검토 단계를 분리합니다. 초안의 누락, 모순, 불명확한 부분을 피드백으로 만들고 그 피드백을 다음 출력에 반영합니다.',
+    caution:
+      '모델이 스스로 만든 피드백도 틀릴 수 있습니다. 중요한 사실 판단에는 원문, 테스트, 로그 같은 외부 근거가 필요합니다.',
+    researchBasis:
+      'Madaan et al. 2023은 LLM이 initial output, self-feedback, refine 단계를 반복해 별도 학습 없이 품질을 개선할 수 있음을 보고했습니다. https://arxiv.org/abs/2303.17651',
+    goodExpressionKr:
+      '먼저 초안을 만들고, 누락/모순/근거 부족을 스스로 점검한 뒤 그 피드백을 반영한 최종본을 제시해줘.',
+    goodExpressionEn:
+      'Create an initial draft, critique it for omissions, contradictions, and weak evidence, then provide a refined final version.',
+    relatedTerms: ['Verifier Pass', 'Stepwise Refinement', 'Rubric-first Evaluation'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Reflexion',
+    pronunciation: '리플렉션',
+    koreanMeaning: '이전 실패에서 얻은 언어적 교훈을 다음 시도에 반영하는 방식',
+    simpleMeaning:
+      '실패한 시도에서 무엇이 문제였는지 문장으로 남기고, 다음 실행에 그 교훈을 적용하는 방법입니다.',
+    useCase: '코드 수정 재시도, 테스트 실패 해결, 긴 작업 재개처럼 여러 번 시도하는 작업에 씁니다.',
+    mechanism:
+      '가중치를 다시 학습하는 것이 아니라 실패 원인을 기억 문장으로 남깁니다. 다음 시도에서는 그 문장이 행동 선택을 제약합니다.',
+    caution:
+      '잘못된 회고를 기억하면 다음 시도도 잘못됩니다. 실패 원인은 테스트 로그나 실제 관찰과 함께 고정해야 합니다.',
+    researchBasis:
+      'Shinn et al. 2023은 language agent가 verbal reflection과 episodic memory를 사용해 trial-and-error 이후 의사결정을 개선할 수 있다고 보고했습니다. https://arxiv.org/abs/2303.11366',
+    goodExpressionKr:
+      '이전 시도에서 실패한 이유를 관찰 근거와 함께 짧게 정리하고, 그 교훈을 다음 수정 전략에 반영해줘.',
+    goodExpressionEn:
+      'Summarize why the previous attempt failed using observed evidence, then apply that lesson to the next strategy.',
+    relatedTerms: ['Self-Refine', 'Failure Mode', 'Regression'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Reference Text Grounding',
+    pronunciation: '레퍼런스 텍스트 그라운딩',
+    koreanMeaning: '제공된 참고문에 근거가 있는 내용만 답하게 하는 지시',
+    simpleMeaning:
+      'AI가 기억이나 추측으로 답하지 않고 사용자가 준 문서 안에서만 근거를 찾게 하는 방식입니다.',
+    useCase: '계약서, 판례 요약, 로그, 감사 결과, 코드 리뷰처럼 원문 근거가 중요한 작업에 씁니다.',
+    mechanism:
+      '답변의 재료를 모델의 일반 기억이 아니라 제공된 텍스트로 제한합니다. 근거 있음, 근거 없음, 확인 필요를 나누게 해서 환각을 줄입니다.',
+    caution:
+      '참고문 자체가 틀렸거나 빠져 있으면 답도 제한됩니다. 참고문 밖 지식이 필요하면 별도 단계로 분리해야 합니다.',
+    researchBasis:
+      'OpenAI 공식 Prompt Engineering Guide는 fabricated answer를 줄이기 위해 reference text를 제공하고 그 근거로 답하게 하는 전략을 권장합니다. https://developers.openai.com/api/docs/guides/prompt-engineering',
+    goodExpressionKr:
+      '제공한 참고문 안에 직접 근거가 있는 내용만 confirmed로 표시하고, 근거가 없으면 unknown으로 분리해줘.',
+    goodExpressionEn:
+      'Use only the provided reference text. Mark directly supported claims as confirmed and unsupported claims as unknown.',
+    relatedTerms: ['Grounding', 'Source of Truth', 'Provenance'],
+    difficulty: 'intermediate',
+  }),
+  makeResearchPromptTerm({
+    term: 'Delimiter Framing',
+    pronunciation: '딜리미터 프레이밍',
+    koreanMeaning: '지시문과 입력 자료를 구분자로 명확히 나누는 방식',
+    simpleMeaning:
+      '명령, 참고문, 출력 형식이 서로 섞이지 않도록 경계선을 치는 프롬프트 습관입니다.',
+    useCase: '긴 텍스트 요약, 로그 분석, 코드 붙여넣기, 사용자 발화 분류처럼 입력 영역이 헷갈릴 때 씁니다.',
+    mechanism:
+      '구분자는 프롬프트 안의 방을 나눕니다. 모델은 어느 문장이 지시이고 어느 문장이 자료인지 더 쉽게 구분합니다.',
+    caution:
+      '구분자만 넣고 역할을 설명하지 않으면 부족합니다. “아래 블록만 자료로 사용하라”는 규칙을 함께 써야 합니다.',
+    researchBasis:
+      'OpenAI Help의 prompt engineering best practices는 instruction을 앞에 두고 ### 또는 triple quotes 같은 구분자로 context를 분리하는 방식을 권장합니다. https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api',
+    goodExpressionKr:
+      '아래 ### 안의 내용만 입력 자료로 사용하고, 지시문과 자료를 섞지 말고 지정한 출력 형식으로만 답해줘.',
+    goodExpressionEn:
+      'Use only the content inside the ### block as input data, keep instructions separate from data, and answer in the requested format.',
+    relatedTerms: ['Boundary', 'Context', 'Output Contract'],
+    difficulty: 'basic',
+  }),
+  makeResearchPromptTerm({
+    term: 'Few-shot Prompting',
+    pronunciation: '퓨샷 프롬프팅',
+    koreanMeaning: '예시 몇 개로 원하는 출력 패턴을 가르치는 방식',
+    simpleMeaning:
+      '말로만 설명하지 않고 좋은 입력-출력 예시를 보여줘서 같은 형식으로 처리하게 하는 방법입니다.',
+    useCase: '분류 기준, 보고서 형식, 문체, 데이터 추출처럼 말로 설명하면 흔들리는 패턴을 고정할 때 씁니다.',
+    mechanism:
+      '예시는 모델에게 작은 표본 규칙으로 작동합니다. “이런 입력이면 이렇게 답한다”는 대응 관계를 프롬프트 안에서 보여줍니다.',
+    caution:
+      '나쁜 예시를 넣으면 그대로 배웁니다. 예시가 너무 많으면 핵심 지시와 실제 입력을 밀어낼 수 있습니다.',
+    researchBasis:
+      'OpenAI Help의 prompt engineering best practices는 zero-shot에서 시작하고 필요하면 few-shot examples로 원하는 형식을 보여주는 방식을 제안합니다. https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api',
+    goodExpressionKr:
+      '아래 예시 2개의 판단 기준과 출력 형식을 따르되, 세 번째 입력은 같은 기준으로 새로 판단해줘.',
+    goodExpressionEn:
+      'Follow the criteria and output format shown in the two examples below, then process the third input using the same standard.',
+    relatedTerms: ['Output Contract', 'Example-driven Prompt', 'Schema'],
+    difficulty: 'intermediate',
+  }),
+  makeResearchPromptTerm({
+    term: 'Tool-Augmented Prompting',
+    pronunciation: '툴 어그멘티드 프롬프팅',
+    koreanMeaning: '모델 답변을 도구 확인과 결합하는 지시 방식',
+    simpleMeaning:
+      'AI가 말로만 답하지 않고 파일, 테스트, 검색, 계산 같은 실제 확인 수단을 쓰게 하는 패턴입니다.',
+    useCase: '코드 수정, 최신 정보 확인, 수치 계산, 로그 분석처럼 모델 기억만으로는 위험한 작업에 씁니다.',
+    mechanism:
+      '언어 모델은 다음 문장을 잘 만들지만 외부 상태를 자동으로 아는 것은 아닙니다. 도구를 연결하면 실제 관찰값이 판단 재료로 들어옵니다.',
+    caution:
+      '도구가 없거나 권한이 없으면 확인했다고 말하면 안 됩니다. 관찰한 것과 추정한 것을 반드시 분리해야 합니다.',
+    researchBasis:
+      'OpenAI 공식 Prompt Engineering Guide는 external tools 사용을 전략으로 제시하고, ReAct 논문은 reasoning과 action의 결합 효과를 보고했습니다. https://developers.openai.com/api/docs/guides/prompt-engineering / https://arxiv.org/abs/2210.03629',
+    goodExpressionKr:
+      '추측하지 말고 필요한 파일/로그/테스트를 확인한 뒤, 관찰한 사실과 그 사실에서 나온 판단을 분리해서 보고해줘.',
+    goodExpressionEn:
+      'Do not guess. Inspect the needed files, logs, or tests, then separate observed facts from conclusions based on those observations.',
+    relatedTerms: ['ReAct Prompting', 'Source of Truth', 'Validation'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Verifier Pass',
+    pronunciation: '베리파이어 패스',
+    koreanMeaning: '최종 답변 전에 한 번 더 검증하는 단계',
+    simpleMeaning:
+      '답을 낸 뒤 바로 끝내지 않고 누락, 모순, 근거 부족을 확인하는 마지막 통과 절차입니다.',
+    useCase: '코드 변경 후 빌드/테스트, 보고서 제출 전 근거 점검, 프롬프트 개선 후 회귀 확인에 씁니다.',
+    mechanism:
+      '생성자 역할과 검증자 역할을 분리합니다. 같은 답변이라도 검증 기준을 따로 적용하면 빠진 조건을 더 잘 찾을 수 있습니다.',
+    caution:
+      '검증 기준이 없으면 “괜찮아 보임”으로 끝납니다. 무엇을 확인해야 하는지 체크리스트로 고정해야 합니다.',
+    researchBasis:
+      'OpenAI 공식 Prompt Engineering Guide는 복잡한 작업을 분해하고 변경을 체계적으로 테스트하라고 권장하며, Self-Refine 계열 연구도 feedback/refine 단계를 분리합니다. https://developers.openai.com/api/docs/guides/prompt-engineering / https://arxiv.org/abs/2303.17651',
+    goodExpressionKr:
+      '최종 답변 전에 검증 패스를 한 번 수행해서 누락, 모순, 근거 부족, 경계 위반 가능성을 체크리스트로 점검해줘.',
+    goodExpressionEn:
+      'Before the final answer, run a verifier pass for omissions, contradictions, weak evidence, and possible boundary violations.',
+    relatedTerms: ['Self-Refine', 'Acceptance Criteria', 'Prompt Regression Test'],
+    difficulty: 'intermediate',
+  }),
+  makeResearchPromptTerm({
+    term: 'Rubric-first Evaluation',
+    pronunciation: '루브릭 퍼스트 이밸류에이션',
+    koreanMeaning: '답하기 전에 평가 기준표를 먼저 세우는 방식',
+    simpleMeaning:
+      '좋은 답의 기준을 먼저 만든 다음 그 기준으로 후보 답이나 결과물을 평가하는 방법입니다.',
+    useCase: '디자인 평가, 코드 리뷰, 문서 품질 판정, AI 응답 비교처럼 주관이 섞이기 쉬운 작업에 씁니다.',
+    mechanism:
+      '평가 기준을 먼저 정하면 모델이 뒤늦게 결론에 맞춰 기준을 바꾸는 일을 줄입니다. 기준, 점수, 근거가 분리됩니다.',
+    caution:
+      '루브릭이 너무 추상적이면 소용이 없습니다. 각 항목이 관찰 가능한 행동이나 산출물로 이어져야 합니다.',
+    researchBasis:
+      'OpenAI 최신 prompting guidance는 coding/front-end 작업에서 역할, 워크플로, 테스트, 평가 기준을 명시하는 방식이 효과적이라고 설명합니다. https://developers.openai.com/api/docs/guides/prompt-engineering',
+    goodExpressionKr:
+      '답하기 전에 평가 기준 5개를 먼저 만들고, 각 기준으로 결과를 점검한 뒤 최종 결론을 제시해줘.',
+    goodExpressionEn:
+      'Create five evaluation criteria first, assess the result against each criterion, then provide the final conclusion.',
+    relatedTerms: ['Acceptance Criteria', 'Review Lens', 'Verifier Pass'],
+    difficulty: 'intermediate',
+  }),
+  makeResearchPromptTerm({
+    term: 'Prompt Regression Test',
+    pronunciation: '프롬프트 리그레션 테스트',
+    koreanMeaning: '프롬프트 변경 전후로 나빠진 사례가 있는지 확인하는 테스트',
+    simpleMeaning:
+      '프롬프트를 고친 뒤 좋아진 한 사례만 보지 않고, 예전 입력에서도 망가지지 않았는지 보는 방법입니다.',
+    useCase: '자주 쓰는 Codex 지시문, 보고서 템플릿, 분쟁자료 분류 프롬프트를 개선할 때 씁니다.',
+    mechanism:
+      '프롬프트도 코드처럼 회귀가 생깁니다. 기준 입력 세트를 두고 변경 전후 결과를 비교하면 개선과 손상을 분리할 수 있습니다.',
+    caution:
+      '테스트 입력이 너무 쉬우면 실제 위험을 못 잡습니다. 정상, 경계, 실패 사례를 섞어야 합니다.',
+    researchBasis:
+      'OpenAI 공식 Prompt Engineering Guide는 prompt 변경을 체계적으로 테스트하라고 권장합니다. 프롬프트도 운영 지시라면 회귀 테스트가 필요합니다. https://developers.openai.com/api/docs/guides/prompt-engineering',
+    goodExpressionKr:
+      '이 프롬프트 변경 전후로 대표 입력 5개를 비교하고, 좋아진 점과 나빠진 점을 표로 분리해줘.',
+    goodExpressionEn:
+      'Compare five representative inputs before and after this prompt change, and separate improvements from regressions in a table.',
+    relatedTerms: ['Regression', 'Verifier Pass', 'Evaluation Harness'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Adversarial Check',
+    pronunciation: '애드버서리얼 체크',
+    koreanMeaning: '내 결론을 깨뜨릴 반례와 실패 조건을 먼저 찾는 검증',
+    simpleMeaning:
+      '답이 맞다고 가정하지 않고, 틀릴 수 있는 조건을 일부러 찾아보는 검토 방식입니다.',
+    useCase: '주장 검토, 보안/경계 점검, 코드 리뷰, 분쟁자료 해석처럼 과신이 위험한 작업에 씁니다.',
+    mechanism:
+      '모델을 동의자 대신 반대 검토자로 세웁니다. 반례, 누락 조건, 악용 가능성을 먼저 찾게 해서 결론의 약한 지점을 드러냅니다.',
+    caution:
+      '반례 찾기는 성능 향상을 보장하는 논문 기법이라기보다 검증 하네스 패턴입니다. 최종 판단은 실제 근거와 테스트로 닫아야 합니다.',
+    researchBasis:
+      'OpenAI의 safety/evaluation guidance와 prompt engineering guide는 중요한 작업에서 테스트와 검증을 분리하는 접근을 강조합니다. 이 카드는 성능 마법이 아니라 검토 하네스 패턴입니다. https://developers.openai.com/api/docs/guides/prompt-engineering',
+    goodExpressionKr:
+      '내 결론을 깨뜨릴 수 있는 반례, 실패 조건, 경계 위반 가능성을 먼저 찾고 그 뒤 결론을 보정해줘.',
+    goodExpressionEn:
+      'First look for counterexamples, failure conditions, and boundary violations that could break my conclusion, then adjust the conclusion.',
+    relatedTerms: ['Guard', 'Boundary', 'Verifier Pass'],
+    difficulty: 'intermediate',
+  }),
+  makeResearchPromptTerm({
+    term: 'Answer Calibration',
+    pronunciation: '앤서 캘리브레이션',
+    koreanMeaning: '확실한 답과 불확실한 답의 강도를 맞추는 방식',
+    simpleMeaning:
+      'AI가 모르는 것을 아는 것처럼 말하지 않도록 확실성, 근거, 미확인 항목을 나누는 습관입니다.',
+    useCase: '법률/의학/투자처럼 고위험 정보, 감사 해석, 로그 분석, 원문 근거 확인에서 씁니다.',
+    mechanism:
+      '답변의 온도를 낮추는 것이 아니라 주장 강도를 조절합니다. confirmed, likely, unknown 같은 칸으로 나누면 과잉 확신을 줄일 수 있습니다.',
+    caution:
+      '숫자 확률을 함부로 만들게 하면 그 숫자도 환각일 수 있습니다. 확률보다 근거 등급과 확인 필요 항목이 안전합니다.',
+    researchBasis:
+      'OpenAI prompt guidance는 세부 조건, 출력 형식, 참고문 근거를 명확히 하라고 권장합니다. 불확실성 분리는 그 원칙을 실제 검토 흐름에 적용한 패턴입니다. https://developers.openai.com/api/docs/guides/prompt-engineering',
+    goodExpressionKr:
+      '답변을 confirmed, likely, unknown으로 나누고, 각 항목마다 근거와 추가 확인이 필요한 이유를 짧게 적어줘.',
+    goodExpressionEn:
+      'Separate the answer into confirmed, likely, and unknown, and briefly state the evidence and remaining checks for each item.',
+    relatedTerms: ['Grounding', 'Confidence', 'Reference Text Grounding'],
+    difficulty: 'intermediate',
+  }),
+  makeResearchPromptTerm({
+    term: 'Reasoning Budget',
+    pronunciation: '리즈닝 버짓',
+    koreanMeaning: '문제 난이도에 맞게 사고 깊이와 비용을 조절하는 기준',
+    simpleMeaning:
+      '모든 질문에 길게 생각하게 하지 않고, 쉬운 일은 빠르게, 어려운 일은 깊게 보게 하는 조절 장치입니다.',
+    useCase: '모바일에서 빠르게 학습하거나, Codex에게 큰 작업과 작은 작업을 구분해서 맡길 때 씁니다.',
+    mechanism:
+      '추론은 시간과 토큰을 씁니다. 작업을 basic/intermediate/advanced로 나누면 모델에게 얼마나 분해하고 검증할지 기준을 줄 수 있습니다.',
+    caution:
+      '너무 낮게 잡으면 복잡한 문제를 대충 처리하고, 너무 높게 잡으면 단순 작업이 느리고 장황해집니다.',
+    researchBasis:
+      'OpenAI 최신 prompting docs는 최신 reasoning/coding 모델에서 역할, 워크플로, 테스트 수준을 작업에 맞게 명시하는 것이 효과적이라고 설명합니다. https://developers.openai.com/api/docs/guides/prompt-engineering',
+    goodExpressionKr:
+      '이 작업을 난이도별로 분류하고, 필요한 추론 깊이와 검증 수준을 정한 뒤 그 수준에 맞게 답해줘.',
+    goodExpressionEn:
+      'Classify the task difficulty, choose the needed reasoning depth and validation level, then answer at that level.',
+    relatedTerms: ['Token Budget', 'Scope', 'Verifier Pass'],
+    difficulty: 'intermediate',
+  }),
+  makeResearchPromptTerm({
+    term: 'Reasoning Trace Caution',
+    pronunciation: '리즈닝 트레이스 코션',
+    koreanMeaning: '내부 추론 전체를 요구하지 않고 검증 가능한 근거를 요구하는 주의 원칙',
+    simpleMeaning:
+      'AI의 긴 속마음 전체를 받으려 하기보다, 최종 판단 근거와 체크리스트를 요구하는 안전한 방식입니다.',
+    useCase: '최신 추론 모델, 민감한 판단, 코드 리뷰, 분쟁자료 해석처럼 답의 근거가 필요하지만 장황한 내부 과정은 불필요할 때 씁니다.',
+    mechanism:
+      '중요한 것은 모델의 모든 내부 토큰이 아니라 사용자가 검증할 수 있는 근거입니다. 그래서 rationale, evidence, checks를 요청합니다.',
+    caution:
+      '“생각 과정을 전부 공개해”보다 “근거와 검증 체크리스트를 보여줘”가 더 실용적입니다. 내부 추론과 검증 가능한 설명을 구분해야 합니다.',
+    researchBasis:
+      'OpenAI의 최신 reasoning/prompting guidance는 명확한 지시, 검증, 출력 기준을 강조합니다. 이 카드는 긴 chain-of-thought 요구 대신 검증 가능한 요약을 요구하는 실무 패턴입니다. https://developers.openai.com/api/docs/guides/prompt-engineering',
+    goodExpressionKr:
+      '내부 추론 전체를 길게 쓰지 말고, 최종 판단 근거, 검증 체크리스트, 남은 불확실성만 간결히 보여줘.',
+    goodExpressionEn:
+      'Do not provide a long hidden reasoning trace; give the final rationale, verification checklist, and remaining uncertainties concisely.',
+    relatedTerms: ['Chain-of-Thought Prompting', 'Answer Calibration', 'Verifier Pass'],
+    difficulty: 'advanced',
+  }),
+  makeResearchPromptTerm({
+    term: 'Context Packing',
+    pronunciation: '컨텍스트 패킹',
+    koreanMeaning: '긴 정보를 모델이 쓰기 좋은 순서와 밀도로 압축해 넣는 방식',
+    simpleMeaning:
+      '많은 자료를 무작정 붙이지 않고 목표, 핵심 사실, 금지 경계, 원문 근거 순서로 정리해서 넣는 방법입니다.',
+    useCase: '긴 Codex 지시, 감사 보고서 해석, 분쟁자료 요약, 프로젝트 인수인계처럼 context window가 아까운 작업에 씁니다.',
+    mechanism:
+      '모델의 주의 공간은 무한하지 않습니다. 중요한 정보를 앞쪽과 명확한 섹션에 두고, 덜 중요한 잡음을 줄이면 필요한 조건을 놓칠 확률이 줄어듭니다.',
+    caution:
+      '압축 과정에서 원문 의미가 바뀌면 위험합니다. 압축본과 원문 링크/출처를 함께 남겨야 합니다.',
+    researchBasis:
+      'OpenAI 공식 Prompt Engineering Guide는 context window 한계와 RAG/reference context 사용을 설명하며, 관련 정보를 요청에 추가하는 전략을 제시합니다. https://developers.openai.com/api/docs/guides/prompt-engineering',
+    goodExpressionKr:
+      '아래 자료를 목표, 핵심 사실, 금지 경계, 확인 필요 항목, 원문 근거 순서로 압축해서 다음 프롬프트에 넣기 좋게 정리해줘.',
+    goodExpressionEn:
+      'Pack the material into goal, key facts, forbidden boundaries, open questions, and source evidence so it is ready for the next prompt.',
+    relatedTerms: ['Context', 'Source of Truth', 'Reference Text Grounding'],
+    difficulty: 'intermediate',
+  }),
+  makeResearchPromptTerm({
+    term: 'Structured Output Prompting',
+    pronunciation: '스트럭처드 아웃풋 프롬프팅',
+    koreanMeaning: '답변 형식을 미리 정해 파싱과 검토가 쉽게 만드는 지시',
+    simpleMeaning:
+      '자유롭게 말하게 하지 않고 섹션, 표, JSON 비슷한 구조, 필수 항목을 미리 정하는 방식입니다.',
+    useCase: 'Codex 최종 보고, 리뷰 결과, 증거 목록, 용어 카드 생성처럼 누락되면 곤란한 출력에 씁니다.',
+    mechanism:
+      '형식은 생각의 레일입니다. 모델이 답변을 예쁜 문장으로 흘려보내지 않고 필요한 칸을 채우게 만듭니다.',
+    caution:
+      '형식이 너무 복잡하면 내용보다 형식 맞추기에 실패합니다. 필요한 칸만 남기는 것이 좋습니다.',
+    researchBasis:
+      'OpenAI Help의 prompt engineering best practices는 원하는 output format을 명확히 말하고 예시로 보여주는 것을 권장합니다. https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api',
+    goodExpressionKr:
+      '아래 형식의 섹션을 빠짐없이 채우고, 근거가 없는 항목은 “확인 필요”라고 적어줘.',
+    goodExpressionEn:
+      'Fill every section in the requested format, and write “needs verification” for any item without evidence.',
+    relatedTerms: ['Output Contract', 'Schema', 'Acceptance Criteria'],
+    difficulty: 'basic',
+  }),
+] satisfies RawDevTerm[]
+
 const addedTerms = [
   ...aiCommandTerms,
   ...librariesToolTerms,
@@ -1610,7 +2068,47 @@ const addedTerms = [
   ...disputeTerms,
   ...expertTerms,
   ...aiExpressionTerms,
+  ...researchPromptTerms,
 ] satisfies RawDevTerm[]
+
+function makeResearchPromptTerm(seed: ResearchPromptSeed): RawDevTerm {
+  const goodExpression = `${seed.goodExpressionKr}\nEN: ${seed.goodExpressionEn}`
+
+  return {
+    id: `research-prompt-${slugify(seed.term)}`,
+    term: seed.term,
+    pronunciation: seed.pronunciation,
+    koreanMeaning: seed.koreanMeaning,
+    simpleMeaning: seed.simpleMeaning,
+    category: 'AI Command',
+    deck: 'ai-command',
+    domainLabel: 'AI 지휘',
+    difficulty: seed.difficulty ?? 'advanced',
+    badExpression: seed.badExpression ?? '최신 논문에 맞게 알아서 잘해줘.',
+    goodExpression,
+    gptPromptExample: seed.goodExpressionEn,
+    codexPromptExample: seed.goodExpressionKr,
+    joovisUsage:
+      'AI 지휘 Deck에서는 이 패턴을 “무조건 성능이 좋아지는 주문”이 아니라, 상황에 맞게 선택하는 작업 설계 도구로 학습합니다.',
+    checkQuestion: `${seed.term}은 어떤 상황에서 쓰고, 어떤 한계나 검증 조건을 함께 둬야 하나요?`,
+    mentalModel:
+      `${seed.term}은 AI에게 문제를 보는 방의 구조를 다시 잡아 주는 도구입니다. ` +
+      '책상 위에 자료, 기준, 검증 칸을 따로 배치하듯이 모델이 한 번에 섞어서 말하지 않게 만듭니다.',
+    whyItMatters:
+      '강한 프롬프트는 멋진 문장보다 작업 구조가 중요합니다. 목표, 근거, 분해, 검증 방식을 지정하면 모델이 추측으로 빈칸을 채우는 비율을 줄이고, 사용자가 결과를 다시 확인하기 쉬워집니다.',
+    withoutIt:
+      '이 패턴 없이 “잘해줘”라고만 말하면 모델은 답변 길이, 검증 깊이, 근거 기준, 출력 형식을 스스로 추정합니다. 그러면 그럴듯하지만 확인하기 어려운 답이 나오기 쉽습니다.',
+    realWorkflow:
+      `실전에서는 먼저 작업이 단순 질의인지, 다단계 추론인지, 외부 확인이 필요한지 판단합니다. 그 다음 ${seed.term}을 적용하고, 마지막에 결과가 기준을 지켰는지 검증합니다.`,
+    mechanism: seed.mechanism,
+    usagePattern: seed.useCase,
+    commonPitfall: seed.caution,
+    expertNote:
+      '논문에서 효과가 보고된 패턴도 모든 모델, 모든 작업에서 항상 성능을 보장하지는 않습니다. 작은 대표 입력으로 먼저 시험하고, 중요한 일에는 근거 확인과 회귀 테스트를 붙이는 것이 좋습니다.',
+    researchBasis: seed.researchBasis,
+    relatedTerms: seed.relatedTerms,
+  }
+}
 
 const buildResult = buildDataset(legacyTerms, addedTerms)
 

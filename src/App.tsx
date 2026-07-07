@@ -157,6 +157,7 @@ function App() {
           term.usagePattern,
           term.commonPitfall,
           term.expertNote,
+          term.researchBasis,
           term.relatedTerms?.join(' '),
           termMemos[term.id],
           term.domainLabel,
@@ -883,6 +884,11 @@ function DeepDiveBlock({
           {term.expertNote}
         </DetailBlock>
       )}
+      {term.researchBasis && (
+        <DetailBlock label="검증 근거" tone="mechanism">
+          {term.researchBasis}
+        </DetailBlock>
+      )}
       {term.relatedTerms && term.relatedTerms.length > 0 && (
         <div className="related-terms" aria-label={`${term.term} 관련 용어`}>
           <span>같이 볼 용어</span>
@@ -1156,6 +1162,7 @@ function findReportMatches(reportText: string, terms: DevTerm[]) {
         ['좋은 표현', term.goodExpression],
         ['프롬프트', term.gptPromptExample],
         ['Codex 예시', term.codexPromptExample],
+        ['검증 근거', term.researchBasis],
         ['관련 용어', term.relatedTerms?.join(' ')],
       ] as Array<[string, string | undefined]>
       const match = candidates.find(([, value]) => {

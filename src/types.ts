@@ -67,6 +67,7 @@ export type DevTerm = {
   usagePattern?: string
   commonPitfall?: string
   expertNote?: string
+  researchBasis?: string
   mentalModel?: string
   whyItMatters?: string
   withoutIt?: string

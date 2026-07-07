@@ -676,6 +676,12 @@ h3 {
   margin-bottom: 0.75rem;
 }
 
+.random-button-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
 .random-controls span,
 .search-count {
   color: var(--muted);
@@ -730,6 +736,11 @@ h3 {
 .primary-action:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .secondary-action {

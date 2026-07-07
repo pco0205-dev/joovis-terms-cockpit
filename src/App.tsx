@@ -111,6 +111,14 @@ function App() {
         ]),
       ) as Record<DeckId, string[]>,
   )
+  const [randomHistoryIndexes, setRandomHistoryIndexes] = useState<Record<DeckId, number>>(() =>
+    Object.fromEntries(
+      deckDefinitions.map((deck) => {
+        const history = loadRandomPracticeHistory(getRandomPracticeKey(todayDateKey, deck.id))
+        return [deck.id, Math.max(history.length - 1, 0)]
+      }),
+    ) as Record<DeckId, number>,
+  )
   const [trainingTermIds, setTrainingTermIds] = useState<Partial<Record<DeckId, string>>>({})
   const [trainingPracticeCounts, setTrainingPracticeCounts] = useState<Record<DeckId, number>>(() =>
     Object.fromEntries(
@@ -172,22 +180,33 @@ function App() {
         : undefined,
     [activeDeck, activeDeckTerms, todayDateKey],
   )
+  const currentRandomHistory = randomPracticeHistories[activeDeck] ?? []
+  const randomHistoryIndex = Math.min(
+    randomHistoryIndexes[activeDeck] ?? Math.max(currentRandomHistory.length - 1, 0),
+    Math.max(currentRandomHistory.length - 1, 0),
+  )
+  const randomHistoryTermId = currentRandomHistory[randomHistoryIndex]
   const randomTerm = useMemo(() => {
     if (activeDeckTerms.length === 0) {
       return undefined
     }
-    const selectedId = randomTermIds[activeDeck]
+    const selectedId = randomHistoryTermId ?? randomTermIds[activeDeck]
     const unseenTerms = getUnseenTerms(activeDeckTerms, randomPracticeHistories[activeDeck] ?? [])
     return (
       activeDeckTerms.find((term) => term.id === selectedId) ??
       pickRandomTerm(unseenTerms.length > 0 ? unseenTerms : activeDeckTerms, null, `random-${activeDeck}-${todayDateKey}`)
     )
-  }, [activeDeck, activeDeckTerms, randomPracticeHistories, randomTermIds, todayDateKey])
+  }, [activeDeck, activeDeckTerms, randomHistoryTermId, randomPracticeHistories, randomTermIds, todayDateKey])
   const randomSeenCount = Math.min(
-    randomPracticeHistories[activeDeck]?.length ?? 0,
+    currentRandomHistory.length,
     activeDeckTerms.length,
   )
   const randomRemainingCount = Math.max(activeDeckTerms.length - randomSeenCount, 0)
+  const canGoPreviousRandomTerm = currentRandomHistory.length > 1 && randomHistoryIndex > 0
+  const randomPositionLabel =
+    currentRandomHistory.length > 0
+      ? `${randomHistoryIndex + 1} / ${currentRandomHistory.length}`
+      : '새 카드'
 
   const deckFavoriteCount = activeDeckTerms.filter((term) => favoriteIds.has(term.id)).length
   const deckKnownCount = activeDeckTerms.filter(
@@ -414,6 +433,19 @@ function App() {
     }
     const practiceKey = getRandomPracticeKey(todayDateKey, activeDeck)
     const currentHistory = randomPracticeHistories[activeDeck] ?? []
+    const currentIndex = Math.min(
+      randomHistoryIndexes[activeDeck] ?? Math.max(currentHistory.length - 1, 0),
+      Math.max(currentHistory.length - 1, 0),
+    )
+
+    if (currentHistory.length > 0 && currentIndex < currentHistory.length - 1) {
+      const nextIndex = currentIndex + 1
+      const nextTermId = currentHistory[nextIndex]
+      setRandomHistoryIndexes((current) => ({ ...current, [activeDeck]: nextIndex }))
+      setRandomTermIds((current) => ({ ...current, [activeDeck]: nextTermId }))
+      return
+    }
+
     const historyWithCurrent = currentHistory.includes(randomTerm.id)
       ? currentHistory
       : [...currentHistory, randomTerm.id]
@@ -424,7 +456,9 @@ function App() {
       : unseenTerms
     const nextTerm = pickRandomTerm(nextPool.length > 0 ? nextPool : activeDeckTerms, randomTerm.id)
     const nextHistory = nextCycleStarted ? [nextTerm.id] : [...historyWithCurrent, nextTerm.id]
+    const nextIndex = nextHistory.length - 1
     setRandomTermIds((current) => ({ ...current, [activeDeck]: nextTerm.id }))
+    setRandomHistoryIndexes((current) => ({ ...current, [activeDeck]: nextIndex }))
     setRandomPracticeHistories((current) => {
       saveRandomPracticeHistory(practiceKey, nextHistory)
       return { ...current, [activeDeck]: nextHistory }
@@ -434,6 +468,24 @@ function App() {
       saveRandomPracticeCount(practiceKey, nextCount)
       return { ...current, [activeDeck]: nextCount }
     })
+  }
+
+  const showPreviousRandomTerm = () => {
+    const currentHistory = randomPracticeHistories[activeDeck] ?? []
+    if (currentHistory.length < 2) {
+      return
+    }
+    const currentIndex = Math.min(
+      randomHistoryIndexes[activeDeck] ?? currentHistory.length - 1,
+      currentHistory.length - 1,
+    )
+    if (currentIndex <= 0) {
+      return
+    }
+    const previousIndex = currentIndex - 1
+    const previousTermId = currentHistory[previousIndex]
+    setRandomHistoryIndexes((current) => ({ ...current, [activeDeck]: previousIndex }))
+    setRandomTermIds((current) => ({ ...current, [activeDeck]: previousTermId }))
   }
 
   const revealTrainingSolution = () => {
@@ -737,16 +789,26 @@ function App() {
           <div className="random-controls">
             <span>
               오늘 랜덤 연습: {randomPracticeCounts[activeDeck]}개 · 남은 새 카드:{' '}
-              {randomRemainingCount}개
+              {randomRemainingCount}개 · 현재 {randomPositionLabel}
             </span>
-            <button
-              type="button"
-              className="primary-action"
-              onClick={showNextRandomTerm}
-              disabled={!randomTerm}
-            >
-              다음 랜덤 용어
-            </button>
+            <div className="random-button-row">
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={showPreviousRandomTerm}
+                disabled={!canGoPreviousRandomTerm}
+              >
+                이전 카드
+              </button>
+              <button
+                type="button"
+                className="primary-action"
+                onClick={showNextRandomTerm}
+                disabled={!randomTerm}
+              >
+                다음 랜덤 용어
+              </button>
+            </div>
           </div>
           <p className="random-cycle-note">
             이 Deck의 카드를 한 바퀴 보기 전까지 같은 용어는 다시 나오지 않습니다.

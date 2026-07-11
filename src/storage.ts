@@ -1,4 +1,4 @@
-import type { ReviewSchedule, ReviewStatus, SavedExpression } from './types'
+import type { LearningScope, ReviewSchedule, ReviewStatus, SavedExpression } from './types'
 
 const FAVORITES_KEY = 'joovis_terms_cockpit_favorites'
 const REVIEW_STATUS_KEY = 'joovis_terms_cockpit_review_statuses'
@@ -11,6 +11,7 @@ const TRAINING_PRACTICE_COUNTS_KEY = 'joovis_terms_cockpit_training_practice_cou
 const TRAINING_PRACTICE_HISTORY_KEY = 'joovis_terms_cockpit_training_practice_history'
 const ROUTINE_CHECKS_KEY = 'joovis_terms_cockpit_routine_checks'
 const SAVED_EXPRESSIONS_KEY = 'joovis_terms_cockpit_saved_expressions'
+const LEARNING_SCOPE_KEY = 'joovis_terms_cockpit_learning_scope'
 
 export function loadFavoriteIds() {
   return new Set(readJson<string[]>(FAVORITES_KEY, []))
@@ -108,6 +109,15 @@ export function loadSavedExpressions() {
 
 export function saveSavedExpressions(expressions: SavedExpression[]) {
   writeJson(SAVED_EXPRESSIONS_KEY, expressions)
+}
+
+export function loadLearningScope(): LearningScope {
+  const value = readJson<LearningScope>(LEARNING_SCOPE_KEY, 'core')
+  return value === 'all' ? 'all' : 'core'
+}
+
+export function saveLearningScope(scope: LearningScope) {
+  writeJson(LEARNING_SCOPE_KEY, scope)
 }
 
 function readJson<T>(key: string, fallback: T): T {

@@ -35,6 +35,10 @@ export type DeckId = (typeof deckDefinitions)[number]['id']
 
 export type Difficulty = 'basic' | 'intermediate' | 'advanced'
 
+export type LearningPriority = 'core' | 'working' | 'reference'
+
+export type LearningScope = 'core' | 'all'
+
 export type ReviewStatus = 'known' | 'review_again'
 
 export type ReviewSchedule = {
@@ -66,6 +70,8 @@ export type DevTerm = {
   deck: DeckId
   domainLabel: string
   difficulty: Difficulty
+  learningPriority: LearningPriority
+  selectionReason: string
   badExpression?: string
   goodExpression?: string
   gptPromptExample?: string
@@ -84,5 +90,10 @@ export type DevTerm = {
   relatedTerms?: string[]
 }
 
-export type RawDevTerm = Omit<DevTerm, 'deck' | 'domainLabel' | 'difficulty'> &
-  Partial<Pick<DevTerm, 'deck' | 'domainLabel' | 'difficulty'>>
+export type RawDevTerm = Omit<
+  DevTerm,
+  'deck' | 'domainLabel' | 'difficulty' | 'learningPriority' | 'selectionReason'
+> &
+  Partial<
+    Pick<DevTerm, 'deck' | 'domainLabel' | 'difficulty' | 'learningPriority' | 'selectionReason'>
+  >

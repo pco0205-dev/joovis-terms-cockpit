@@ -1,20 +1,13 @@
-const CACHE_NAME = 'joovis-terms-cockpit-v6'
-const APP_SHELL = [
-  '/',
-  '/index.html',
+const CACHE_NAME = 'joovis-terms-cockpit-v7'
+const STATIC_SHELL = [
   '/manifest.webmanifest',
   '/favicon.svg',
-  '/icon-192-v6.png',
-  '/icon-512-v6.png',
+  '/icon-192.png',
+  '/icon-512.png',
 ]
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting()),
-  )
+  event.waitUntil(precacheCurrentBuild().then(() => self.skipWaiting()))
 })
 
 self.addEventListener('activate', (event) => {
@@ -27,6 +20,24 @@ self.addEventListener('activate', (event) => {
       .then(() => self.clients.claim()),
   )
 })
+
+async function precacheCurrentBuild() {
+  const cache = await caches.open(CACHE_NAME)
+  const indexResponse = await fetch('/index.html', { cache: 'no-store' })
+  if (!indexResponse.ok) {
+    throw new Error(`App shell request failed with ${indexResponse.status}`)
+  }
+
+  const html = await indexResponse.clone().text()
+  const buildAssets = [...html.matchAll(/(?:src|href)=["']([^"']+)["']/g)]
+    .map((match) => new URL(match[1], self.location.origin))
+    .filter((url) => url.origin === self.location.origin)
+    .map((url) => `${url.pathname}${url.search}`)
+
+  await cache.put('/index.html', indexResponse.clone())
+  await cache.put('/', indexResponse)
+  await cache.addAll([...new Set([...STATIC_SHELL, ...buildAssets])])
+}
 
 self.addEventListener('fetch', (event) => {
   const request = event.request

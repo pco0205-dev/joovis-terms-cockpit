@@ -67,9 +67,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100svh;
-  background:
-    linear-gradient(180deg, rgba(8, 127, 140, 0.08), transparent 14rem),
-    var(--bg);
+  background: var(--bg);
 }
 
 button,
@@ -129,9 +127,8 @@ h3 {
 }
 
 .app-header {
-  display: flex;
+  display: grid;
   align-items: start;
-  justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 0 0.6rem;
 }
@@ -140,7 +137,7 @@ h3 {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 0.4rem;
 }
@@ -333,17 +330,63 @@ h3 {
   white-space: nowrap;
 }
 
-.difficulty-panel {
+.learning-scope-panel {
+  display: grid;
+  gap: 0.65rem;
   margin-top: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: var(--panel);
 }
 
-.difficulty-panel > span {
-  display: block;
-  margin-bottom: 0.35rem;
+.learning-scope-panel > div:first-child {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.learning-scope-panel strong {
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.learning-scope-panel span {
   color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.learning-scope-panel.compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+  padding: 0.42rem 0.5rem;
+}
+
+.learning-scope-panel.compact > div:first-child {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.learning-scope-panel.compact > div:first-child span {
+  display: none;
+}
+
+.learning-scope-panel.compact > div:first-child strong {
+  font-size: 0.78rem;
+}
+
+.learning-scope-panel.compact .chips {
+  justify-content: flex-end;
+  min-width: 0;
+  padding-bottom: 0;
+}
+
+.learning-scope-panel.compact .chip {
+  min-height: 2.25rem;
+  padding: 0 0.6rem;
   font-size: 0.76rem;
-  font-weight: 900;
-  text-transform: uppercase;
 }
 
 .mode-panel {
@@ -406,6 +449,34 @@ h3 {
   font-size: 0.74rem;
   font-weight: 850;
   overflow-wrap: anywhere;
+}
+
+.priority-badge {
+  display: inline-flex;
+  min-height: 1.8rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.priority-badge.priority-core {
+  border-color: color-mix(in srgb, var(--known) 48%, var(--border));
+  color: var(--known);
+  background: var(--known-soft);
+}
+
+.priority-badge.priority-working {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.priority-badge.priority-reference {
+  color: var(--muted);
+  background: var(--panel-strong);
 }
 
 .status-badges {
@@ -536,6 +607,42 @@ h3 {
 .concept-map-block .detail-block:first-child,
 .deep-dive-block .detail-block:first-child {
   margin-top: 0;
+}
+
+.deep-details {
+  margin-top: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 88%, var(--panel-strong));
+}
+
+.deep-details summary {
+  cursor: pointer;
+  padding: 0.78rem;
+  color: var(--accent-strong);
+  font-weight: 900;
+  list-style-position: inside;
+}
+
+.deep-details[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.deep-details > :not(summary) {
+  margin-right: 0.78rem;
+  margin-left: 0.78rem;
+}
+
+.deep-details > :last-child {
+  margin-bottom: 0.78rem;
+}
+
+.selection-reason {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 750;
 }
 
 .related-terms {
@@ -670,7 +777,8 @@ h3 {
   background: var(--favorite-soft);
 }
 
-.random-controls {
+.random-controls,
+.review-controls {
   display: grid;
   gap: 0.55rem;
   margin-bottom: 0.75rem;
@@ -683,6 +791,7 @@ h3 {
 }
 
 .random-controls span,
+.review-controls span,
 .search-count {
   color: var(--muted);
   font-size: 0.86rem;
@@ -906,7 +1015,6 @@ h3 {
   overflow-wrap: anywhere;
 }
 
-.review-stack,
 .compact-list {
   display: grid;
   gap: 0.75rem;
@@ -1006,6 +1114,11 @@ h3 {
 
 .search-count {
   margin: 0.75rem 0 0.45rem;
+}
+
+.load-more-button {
+  width: 100%;
+  margin-top: 0.75rem;
 }
 
 .compact-card {
@@ -1141,6 +1254,19 @@ h3 {
     font-size: 1.85rem;
   }
 
+  .app-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .header-actions {
+    justify-content: flex-end;
+  }
+
+  .learning-scope-panel {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
   .mode-button {
     min-height: 4.5rem;
   }
@@ -1149,7 +1275,8 @@ h3 {
     font-size: 1.08rem;
   }
 
-  .random-controls {
+  .random-controls,
+  .review-controls {
     grid-template-columns: 1fr auto;
     align-items: center;
   }

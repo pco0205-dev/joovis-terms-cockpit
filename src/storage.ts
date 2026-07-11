@@ -1,4 +1,10 @@
-import type { LearningScope, ReviewSchedule, ReviewStatus, SavedExpression } from './types'
+import type {
+  LearningScope,
+  RecallMode,
+  ReviewSchedule,
+  ReviewStatus,
+  SavedExpression,
+} from './types'
 
 const FAVORITES_KEY = 'joovis_terms_cockpit_favorites'
 const REVIEW_STATUS_KEY = 'joovis_terms_cockpit_review_statuses'
@@ -12,6 +18,7 @@ const TRAINING_PRACTICE_HISTORY_KEY = 'joovis_terms_cockpit_training_practice_hi
 const ROUTINE_CHECKS_KEY = 'joovis_terms_cockpit_routine_checks'
 const SAVED_EXPRESSIONS_KEY = 'joovis_terms_cockpit_saved_expressions'
 const LEARNING_SCOPE_KEY = 'joovis_terms_cockpit_learning_scope'
+const RECALL_MODE_KEY = 'joovis_terms_cockpit_recall_mode'
 
 export function loadFavoriteIds() {
   return new Set(readJson<string[]>(FAVORITES_KEY, []))
@@ -118,6 +125,18 @@ export function loadLearningScope(): LearningScope {
 
 export function saveLearningScope(scope: LearningScope) {
   writeJson(LEARNING_SCOPE_KEY, scope)
+}
+
+export function loadRecallMode(): RecallMode {
+  const value = readJson<RecallMode>(RECALL_MODE_KEY, 'english-korean')
+  if (value === 'korean-english' || value === 'mechanism') {
+    return value
+  }
+  return 'english-korean'
+}
+
+export function saveRecallMode(mode: RecallMode) {
+  writeJson(RECALL_MODE_KEY, mode)
 }
 
 function readJson<T>(key: string, fallback: T): T {

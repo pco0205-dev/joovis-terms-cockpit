@@ -39,6 +39,8 @@ export type LearningPriority = 'core' | 'working' | 'reference'
 
 export type LearningScope = 'core' | 'all'
 
+export type RecallMode = 'english-korean' | 'korean-english' | 'mechanism'
+
 export type ReviewStatus = 'known' | 'review_again'
 
 export type ReviewSchedule = {

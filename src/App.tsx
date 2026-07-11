@@ -7,6 +7,7 @@ import {
   type Difficulty,
   type LearningPriority,
   type LearningScope,
+  type RecallMode,
   type ReviewSchedule,
   type ReviewStatus,
   type SavedExpression,
@@ -17,6 +18,7 @@ import {
   loadOnboardingDismissed,
   loadRandomPracticeCount,
   loadRandomPracticeHistory,
+  loadRecallMode,
   loadReviewSchedules,
   loadReviewStatuses,
   loadRoutineChecks,
@@ -29,6 +31,7 @@ import {
   saveOnboardingDismissed,
   saveRandomPracticeCount,
   saveRandomPracticeHistory,
+  saveRecallMode,
   saveReviewSchedules,
   saveReviewStatuses,
   saveRoutineChecks,
@@ -42,6 +45,31 @@ type Mode = 'routine' | 'today' | 'random' | 'review' | 'training' | 'search' | 
 type ViewState = { deck: DeckId; mode: Mode }
 type DifficultyFilter = 'all' | Difficulty
 type PriorityFilter = 'all' | LearningPriority
+type UndoAction =
+  | {
+      kind: 'review'
+      termId: string
+      message: string
+      hadReviewStatus: boolean
+      previousReviewStatus?: ReviewStatus
+      hadReviewSchedule: boolean
+      previousReviewSchedule?: ReviewSchedule
+    }
+  | {
+      kind: 'favorite'
+      termId: string
+      message: string
+      wasFavorite: boolean
+    }
+
+type InstructionElementId = 'goal' | 'input' | 'boundary' | 'output' | 'validation'
+
+type InstructionChecklistResult = {
+  id: InstructionElementId
+  label: string
+  passed: boolean
+  hint: string
+}
 
 const modes: Array<{ id: Mode; label: string; description: string }> = [
   { id: 'routine', label: '루틴', description: '오늘 할 일' },
@@ -59,10 +87,10 @@ const guideItems = [
     body: '처음에는 핵심 학습으로 반복하고, 전문 용어가 필요할 때 전체 사전과 검색을 사용합니다.',
   },
   { title: '루틴', body: '오늘 할 학습량을 한 화면에서 확인합니다.' },
-  { title: '오늘', body: '하루 1개 용어를 봅니다.' },
-  { title: '랜덤', body: '버튼을 눌러 새 용어를 연습합니다.' },
+  { title: '오늘', body: '회상 방향을 고르고 답을 떠올린 뒤 정답을 확인합니다.' },
+  { title: '랜덤', body: '한 바퀴 동안 중복 없이 새 용어를 능동 회상합니다.' },
   { title: '다시 보기', body: '모르는 용어만 다시 봅니다.' },
-  { title: 'AI 훈련', body: '나쁜 지시문을 좋은 한국어/영어 지시문으로 바꿔봅니다.' },
+  { title: 'AI 훈련', body: '목표·입력·경계·출력·검증을 채우고 한국어/영어 모범 표현과 비교합니다.' },
   { title: '전체 검색', body: 'Codex 보고서에서 모르는 단어를 찾습니다.' },
   { title: '보고서', body: '긴 문장을 붙여 넣고 앱의 용어와 표현을 찾아봅니다.' },
 ]
@@ -81,6 +109,67 @@ const priorityFilters: Array<{ id: PriorityFilter; label: string }> = [
   { id: 'reference', label: '전문 참고' },
 ]
 
+const recallModeOptions: Array<{ id: RecallMode; label: string; description: string }> = [
+  { id: 'english-korean', label: '영→한', description: '영어를 보고 뜻 떠올리기' },
+  { id: 'korean-english', label: '한→영', description: '한국어 뜻에서 영어 찾기' },
+  { id: 'mechanism', label: '원리', description: '왜 필요한지와 흐름 설명하기' },
+]
+
+const instructionElementDefinitions: Array<{
+  id: InstructionElementId
+  label: string
+  pattern: RegExp
+  hint: string
+}> = [
+  {
+    id: 'goal',
+    label: '목표',
+    pattern:
+      /목표|목적|완료|구현|수정|분석|검토|작성|생성|탐색|비교|분류|설명|판정|배포|goal|objective|implement|fix|analy[sz]e|review|create|identify|compare|classify|explain|determine|deploy/i,
+    hint: '무엇을 완료해야 하는지 행동으로 적으세요.',
+  },
+  {
+    id: 'input',
+    label: '입력',
+    pattern:
+      /입력|자료|파일|코드|로그|문서|폴더|저장소|현재 상태|참고문|원문|input|material|file|code|log|document|folder|repository|context|source text|reference/i,
+    hint: '어떤 파일·문서·상태를 기준으로 볼지 적으세요.',
+  },
+  {
+    id: 'boundary',
+    label: '경계',
+    pattern:
+      /경계|범위|금지|제외|허용|하지\s*마|하지\s*말|오직|안에서만|내에서만|scope|boundary|do not|must not|only|within|exclude|avoid|allowed/i,
+    hint: '허용 범위와 하지 말아야 할 일을 적으세요.',
+  },
+  {
+    id: 'output',
+    label: '출력',
+    pattern:
+      /출력|형식|보고|목록|표로|표\s*형식|테이블|요약|단계별|JSON|CSV|Markdown|output|format|report|list|table|summary|respond|return/i,
+    hint: '원하는 답변 형식과 포함 항목을 적으세요.',
+  },
+  {
+    id: 'validation',
+    label: '검증',
+    pattern:
+      /검증|확인|테스트|빌드|린트|근거|판정|통과|실패|verify|validate|test|build|lint|evidence|acceptance|pass|fail/i,
+    hint: '완료를 무엇으로 확인할지 적으세요.',
+  },
+]
+
+const instructionTemplateFields: Record<InstructionElementId, string> = {
+  goal: '목표',
+  input: '입력 자료',
+  boundary: '허용/금지 경계',
+  output: '출력 형식',
+  validation: '검증 기준',
+}
+
+const instructionTemplate = Object.values(instructionTemplateFields)
+  .map((label) => `${label}:`)
+  .join('\n')
+
 function App() {
   const [activeDeck, setActiveDeck] = useState<DeckId>('ai-command')
   const [activeMode, setActiveMode] = useState<Mode>('routine')
@@ -90,6 +179,7 @@ function App() {
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('all')
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
   const [learningScope, setLearningScope] = useState<LearningScope>(() => loadLearningScope())
+  const [recallMode, setRecallMode] = useState<RecallMode>(() => loadRecallMode())
   const [searchAllDecks, setSearchAllDecks] = useState(false)
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => loadFavoriteIds())
   const [reviewStatuses, setReviewStatuses] = useState<Record<string, ReviewStatus>>(() =>
@@ -118,10 +208,13 @@ function App() {
   const [randomTermIds, setRandomTermIds] = useState<Partial<Record<DeckId, string>>>({})
   const [randomPracticeCounts, setRandomPracticeCounts] = useState<Record<DeckId, number>>(() =>
     Object.fromEntries(
-      deckDefinitions.map((deck) => [
-        deck.id,
-        loadRandomPracticeCount(getRandomPracticeKey(todayDateKey, deck.id, learningScope)),
-      ]),
+      deckDefinitions.map((deck) => {
+        const key = getRandomPracticeKey(todayDateKey, deck.id, learningScope)
+        return [
+          deck.id,
+          Math.max(loadRandomPracticeCount(key), loadRandomPracticeHistory(key).length),
+        ]
+      }),
     ) as Record<DeckId, number>,
   )
   const [randomPracticeHistories, setRandomPracticeHistories] = useState<Record<DeckId, string[]>>(
@@ -176,6 +269,7 @@ function App() {
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine,
   )
+  const [undoAction, setUndoAction] = useState<UndoAction | null>(null)
 
   useEffect(() => {
     const updateOnlineState = () => setIsOnline(navigator.onLine)
@@ -186,6 +280,14 @@ function App() {
       window.removeEventListener('offline', updateOnlineState)
     }
   }, [])
+
+  useEffect(() => {
+    if (!undoAction) {
+      return
+    }
+    const timeoutId = window.setTimeout(() => setUndoAction(null), 5000)
+    return () => window.clearTimeout(timeoutId)
+  }, [undoAction])
 
   useEffect(() => {
     const updateDate = () => setTodayDateKey(getDateKey(new Date()))
@@ -209,20 +311,25 @@ function App() {
           }),
         ),
       )
-      setRandomPracticeCounts(
-        Object.fromEntries(
-          deckDefinitions.map((deck) => {
-            const key = getRandomPracticeKey(todayDateKey, deck.id, learningScope)
-            return [deck.id, loadRandomPracticeCount(key)]
-          }),
-        ) as Record<DeckId, number>,
-      )
       const nextRandomHistories = Object.fromEntries(
         deckDefinitions.map((deck) => {
           const key = getRandomPracticeKey(todayDateKey, deck.id, learningScope)
           return [deck.id, loadRandomPracticeHistory(key)]
         }),
       ) as Record<DeckId, string[]>
+      setRandomPracticeCounts(
+        Object.fromEntries(
+          deckDefinitions.map((deck) => {
+            const key = getRandomPracticeKey(todayDateKey, deck.id, learningScope)
+            const storedCount = loadRandomPracticeCount(key)
+            const normalizedCount = Math.max(storedCount, nextRandomHistories[deck.id].length)
+            if (normalizedCount !== storedCount) {
+              saveRandomPracticeCount(key, normalizedCount)
+            }
+            return [deck.id, normalizedCount]
+          }),
+        ) as Record<DeckId, number>,
+      )
       setRandomPracticeHistories(nextRandomHistories)
       setRandomHistoryIndexes(
         Object.fromEntries(
@@ -381,6 +488,11 @@ function App() {
     trainingTerms.length,
   )
   const trainingRemainingCount = Math.max(trainingTerms.length - trainingSeenCount, 0)
+  const instructionChecklist = useMemo(
+    () => analyzeInstructionDraft(trainingAnswer),
+    [trainingAnswer],
+  )
+  const instructionChecklistScore = instructionChecklist.filter((item) => item.passed).length
   const todayDone = todayTerm ? Boolean(reviewStatuses[todayTerm.id]) : false
   const randomDone = (randomPracticeCounts[activeDeck] ?? 0) >= 5
   const reviewGoal = Math.min(5, Math.max(deckDueReviewCount, deckReviewedTodayCount))
@@ -482,6 +594,8 @@ function App() {
     setExpandedTermId(null)
     setQuery('')
     setVisibleSearchCount(30)
+    setTrainingAnswer('')
+    setIsTrainingSolutionVisible(false)
   }
 
   const selectMode = (modeId: Mode) => {
@@ -514,6 +628,11 @@ function App() {
     )
   }
 
+  const changeRecallMode = (mode: RecallMode) => {
+    saveRecallMode(mode)
+    setRecallMode(mode)
+  }
+
   const openRelatedTerm = (relatedTerm: string, sourceDeck: DeckId) => {
     const matchedTerm = findTermByName(relatedTerm, sourceDeck)
     if (!matchedTerm) {
@@ -544,6 +663,13 @@ function App() {
   }
 
   const toggleFavorite = (termId: string) => {
+    const wasFavorite = favoriteIds.has(termId)
+    setUndoAction({
+      kind: 'favorite',
+      termId,
+      message: wasFavorite ? '중요 저장을 해제했습니다.' : '중요 용어로 저장했습니다.',
+      wasFavorite,
+    })
     setFavoriteIds((current) => {
       const next = new Set(current)
       if (next.has(termId)) {
@@ -557,6 +683,15 @@ function App() {
   }
 
   const updateReviewStatus = (termId: string, nextStatus: ReviewStatus) => {
+    setUndoAction({
+      kind: 'review',
+      termId,
+      message: nextStatus === 'known' ? '알고 있음으로 기록했습니다.' : '다시 보기로 기록했습니다.',
+      hadReviewStatus: Object.prototype.hasOwnProperty.call(reviewStatuses, termId),
+      previousReviewStatus: reviewStatuses[termId],
+      hadReviewSchedule: Object.prototype.hasOwnProperty.call(reviewSchedules, termId),
+      previousReviewSchedule: reviewSchedules[termId],
+    })
     setReviewStatuses((current) => {
       const next = { ...current, [termId]: nextStatus }
       saveReviewStatuses(next)
@@ -570,6 +705,48 @@ function App() {
       saveReviewSchedules(next)
       return next
     })
+  }
+
+  const undoLastAction = () => {
+    if (!undoAction) {
+      return
+    }
+
+    if (undoAction.kind === 'favorite') {
+      setFavoriteIds((current) => {
+        const next = new Set(current)
+        if (undoAction.wasFavorite) {
+          next.add(undoAction.termId)
+        } else {
+          next.delete(undoAction.termId)
+        }
+        saveFavoriteIds(next)
+        return next
+      })
+    } else {
+      setReviewStatuses((current) => {
+        const next = { ...current }
+        if (undoAction.hadReviewStatus && undoAction.previousReviewStatus) {
+          next[undoAction.termId] = undoAction.previousReviewStatus
+        } else {
+          delete next[undoAction.termId]
+        }
+        saveReviewStatuses(next)
+        return next
+      })
+      setReviewSchedules((current) => {
+        const next = { ...current }
+        if (undoAction.hadReviewSchedule && undoAction.previousReviewSchedule) {
+          next[undoAction.termId] = undoAction.previousReviewSchedule
+        } else {
+          delete next[undoAction.termId]
+        }
+        saveReviewSchedules(next)
+        return next
+      })
+    }
+
+    setUndoAction(null)
   }
 
   const toggleRoutineCheck = (checkId: string) => {
@@ -708,6 +885,10 @@ function App() {
     })
     setTrainingAnswer('')
     setIsTrainingSolutionVisible(false)
+  }
+
+  const addInstructionTemplate = () => {
+    setTrainingAnswer((current) => appendMissingInstructionFields(current))
   }
 
   const applyExpressionTemplate = () => {
@@ -956,7 +1137,9 @@ function App() {
         <ModePanel title="오늘의 용어" subtitle="선택한 Deck 안에서 날짜 기준으로 하루 1개 고정됩니다.">
           {todayTerm ? (
             <StudyCard
+              key={todayTerm.id}
               term={todayTerm}
+              recallMode={recallMode}
               isFavorite={favoriteIds.has(todayTerm.id)}
               reviewStatus={reviewStatuses[todayTerm.id]}
               reviewSchedule={reviewSchedules[todayTerm.id]}
@@ -965,6 +1148,7 @@ function App() {
               onUpdateReviewStatus={updateReviewStatus}
               onUpdateMemo={updateTermMemo}
               onOpenRelatedTerm={openRelatedTerm}
+              onChangeRecallMode={changeRecallMode}
             />
           ) : (
             <EmptyStateCard message="현재 난이도 필터에 해당하는 오늘의 용어가 없습니다. 난이도를 전체로 바꿔보세요." />
@@ -1005,6 +1189,7 @@ function App() {
             <StudyCard
               key={randomTerm.id}
               term={randomTerm}
+              recallMode={recallMode}
               isFavorite={favoriteIds.has(randomTerm.id)}
               reviewStatus={reviewStatuses[randomTerm.id]}
               reviewSchedule={reviewSchedules[randomTerm.id]}
@@ -1013,6 +1198,7 @@ function App() {
               onUpdateReviewStatus={updateReviewStatus}
               onUpdateMemo={updateTermMemo}
               onOpenRelatedTerm={openRelatedTerm}
+              onChangeRecallMode={changeRecallMode}
             />
           ) : (
             <EmptyStateCard message="현재 난이도 필터에 해당하는 랜덤 카드가 없습니다. 난이도를 전체로 바꿔보세요." />
@@ -1057,6 +1243,7 @@ function App() {
               <StudyCard
                 key={reviewTerm.id}
                 term={reviewTerm}
+                recallMode={recallMode}
                 isFavorite={favoriteIds.has(reviewTerm.id)}
                 reviewStatus={reviewStatuses[reviewTerm.id]}
                 reviewSchedule={reviewSchedules[reviewTerm.id]}
@@ -1065,6 +1252,7 @@ function App() {
                 onUpdateReviewStatus={updateReviewStatus}
                 onUpdateMemo={updateTermMemo}
                 onOpenRelatedTerm={openRelatedTerm}
+                onChangeRecallMode={changeRecallMode}
               />
             </>
           ) : (
@@ -1110,9 +1298,14 @@ function App() {
                 {trainingTerm.badExpression ?? '이거 좀 봐줘.'}
               </DetailBlock>
 
-              <label className="search-label" htmlFor="training-answer">
-                내가 바꿔본 지시문
-              </label>
+              <div className="training-input-heading">
+                <label className="search-label" htmlFor="training-answer">
+                  내가 바꿔본 지시문
+                </label>
+                <button type="button" onClick={addInstructionTemplate}>
+                  5요소 틀 넣기
+                </button>
+              </div>
               <textarea
                 id="training-answer"
                 className="training-input"
@@ -1120,6 +1313,11 @@ function App() {
                 value={trainingAnswer}
                 placeholder="목표, 입력 자료, 금지 경계, 출력 형식, 검증 기준을 넣어서 다시 써보세요."
                 onChange={(event) => setTrainingAnswer(event.target.value)}
+              />
+
+              <InstructionChecklist
+                items={instructionChecklist}
+                score={instructionChecklistScore}
               />
 
               <div className="training-actions">
@@ -1438,6 +1636,14 @@ function App() {
       )}
 
       {isGuideOpen && <GuideDialog onClose={dismissGuide} />}
+      {undoAction && (
+        <div className="undo-toast" role="status" aria-live="polite">
+          <span>{undoAction.message}</span>
+          <button type="button" onClick={undoLastAction}>
+            되돌리기
+          </button>
+        </div>
+      )}
     </main>
   )
 }
@@ -1526,8 +1732,14 @@ type TermActionProps = {
   onOpenRelatedTerm: (relatedTerm: string, sourceDeck: DeckId) => void
 }
 
+type StudyCardProps = TermActionProps & {
+  recallMode: RecallMode
+  onChangeRecallMode: (mode: RecallMode) => void
+}
+
 function StudyCard({
   term,
+  recallMode,
   isFavorite,
   reviewStatus,
   reviewSchedule,
@@ -1536,9 +1748,18 @@ function StudyCard({
   onUpdateReviewStatus,
   onUpdateMemo,
   onOpenRelatedTerm,
-}: TermActionProps) {
+  onChangeRecallMode,
+}: StudyCardProps) {
+  const [isAnswerVisible, setIsAnswerVisible] = useState(false)
+  const activeRecallOption = recallModeOptions.find((option) => option.id === recallMode)!
+
+  const selectRecallMode = (mode: RecallMode) => {
+    onChangeRecallMode(mode)
+    setIsAnswerVisible(false)
+  }
+
   return (
-    <article className={`study-card deck-${term.deck}`}>
+    <article className={`study-card deck-${term.deck} ${isAnswerVisible ? 'answer-visible' : ''}`}>
       <div className="card-meta-row">
         <div className="badge-group">
           <span className="category-badge">{term.domainLabel}</span>
@@ -1551,40 +1772,151 @@ function StudyCard({
         <StatusBadges isFavorite={isFavorite} reviewStatus={reviewStatus} />
       </div>
 
-      <div className="term-title">
-        <h3>{term.term}</h3>
-        <p>{term.pronunciation}</p>
-      </div>
+      <section className="recall-controls" aria-label="회상 방향">
+        <div>
+          <strong>능동 회상</strong>
+          <span>{activeRecallOption.description}</span>
+        </div>
+        <div className="recall-mode-options">
+          {recallModeOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={recallMode === option.id ? 'active' : ''}
+              aria-pressed={recallMode === option.id}
+              title={option.description}
+              onClick={() => selectRecallMode(option.id)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <p className="korean-meaning">{term.koreanMeaning}</p>
-      <p className="simple-meaning">{term.simpleMeaning}</p>
+      {!isAnswerVisible ? (
+        <RecallFront term={term} recallMode={recallMode} onReveal={() => setIsAnswerVisible(true)} />
+      ) : (
+        <>
+          <div className="recall-answer-header">
+            <span>정답과 심화 설명</span>
+            <button type="button" onClick={() => setIsAnswerVisible(false)}>
+              다시 가리기
+            </button>
+          </div>
 
-      <DetailBlock label={getUsageLabel(term)} tone="usage">
-        {getUsageText(term)}
-      </DetailBlock>
-      <details className="deep-details">
-        <summary>심화 이해 · 작동 원리와 현장 흐름</summary>
-        <p className="selection-reason">{term.selectionReason}</p>
-        <ConceptMapBlock term={term} />
-        <DeepDiveBlock term={term} onOpenRelatedTerm={onOpenRelatedTerm} />
-        <CautionBlock term={term} />
-      </details>
-      <DetailBlock label="확인 질문" tone="question">
-        {term.checkQuestion}
-      </DetailBlock>
-      <ExpressionBlock term={term} />
-      <PromptBlock term={term} />
-      <MemoBlock term={term} memo={memo} onUpdateMemo={onUpdateMemo} />
+          <div className="term-title">
+            <h3>{term.term}</h3>
+            <p>{term.pronunciation}</p>
+          </div>
 
-      <TermActions
-        term={term}
-        isFavorite={isFavorite}
-        reviewStatus={reviewStatus}
-        reviewSchedule={reviewSchedule}
-        onToggleFavorite={onToggleFavorite}
-        onUpdateReviewStatus={onUpdateReviewStatus}
-      />
+          <p className="korean-meaning">{term.koreanMeaning}</p>
+          <p className="simple-meaning">{term.simpleMeaning}</p>
+
+          <TermActions
+            term={term}
+            isFavorite={isFavorite}
+            reviewStatus={reviewStatus}
+            reviewSchedule={reviewSchedule}
+            onToggleFavorite={onToggleFavorite}
+            onUpdateReviewStatus={onUpdateReviewStatus}
+            sticky
+          />
+
+          <DetailBlock label={getUsageLabel(term)} tone="usage">
+            {getUsageText(term)}
+          </DetailBlock>
+          <details className="deep-details">
+            <summary>심화 이해 · 작동 원리와 현장 흐름</summary>
+            <p className="selection-reason">{term.selectionReason}</p>
+            <ConceptMapBlock term={term} />
+            <DeepDiveBlock term={term} onOpenRelatedTerm={onOpenRelatedTerm} />
+            <CautionBlock term={term} />
+          </details>
+          <DetailBlock label="확인 질문" tone="question">
+            {term.checkQuestion}
+          </DetailBlock>
+          <ExpressionBlock term={term} />
+          <PromptBlock term={term} />
+          <MemoBlock term={term} memo={memo} onUpdateMemo={onUpdateMemo} />
+        </>
+      )}
     </article>
+  )
+}
+
+function RecallFront({
+  term,
+  recallMode,
+  onReveal,
+}: {
+  term: DevTerm
+  recallMode: RecallMode
+  onReveal: () => void
+}) {
+  const isKoreanToEnglish = recallMode === 'korean-english'
+  const isMechanismRecall = recallMode === 'mechanism'
+
+  return (
+    <section className={`recall-front recall-${recallMode}`} aria-live="polite">
+      <p className="eyebrow">먼저 머릿속으로 답해보세요</p>
+      {isKoreanToEnglish ? (
+        <>
+          <h3>이 뜻에 해당하는 영어 용어는?</h3>
+          <p className="recall-korean-clue">{term.koreanMeaning}</p>
+        </>
+      ) : (
+        <div className="term-title">
+          <h3>{term.term}</h3>
+          <p>{term.pronunciation}</p>
+        </div>
+      )}
+
+      {isMechanismRecall && <p className="recall-korean-clue">{term.koreanMeaning}</p>}
+      <p className="recall-question">
+        {isKoreanToEnglish
+          ? '영어 용어와 발음을 소리 내어 말해보세요.'
+          : isMechanismRecall
+            ? '왜 필요한지, 입력이 어떤 과정을 거쳐 무엇으로 검증되는지 설명해보세요.'
+            : '한국어 뜻과 실제로 쓰는 상황을 한 문장씩 떠올려보세요.'}
+      </p>
+      <button type="button" className="primary-action recall-reveal" onClick={onReveal}>
+        정답 보기
+      </button>
+    </section>
+  )
+}
+
+function InstructionChecklist({
+  items,
+  score,
+}: {
+  items: InstructionChecklistResult[]
+  score: number
+}) {
+  return (
+    <section className="instruction-checklist" aria-label="지시문 5요소 점검">
+      <div className="instruction-checklist-heading">
+        <div>
+          <span>지시문 5요소</span>
+          <strong>{score} / 5</strong>
+        </div>
+        <p>문장 안에서 판단 가능한 단서를 확인합니다.</p>
+      </div>
+      <div className="instruction-checklist-grid">
+        {items.map((item) => (
+          <div className={item.passed ? 'passed' : 'missing'} key={item.id}>
+            <span>{item.passed ? '포함' : '보완'}</span>
+            <div>
+              <strong>{item.label}</strong>
+              <p>{item.passed ? '관련 단서가 있습니다.' : item.hint}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="instruction-checklist-note">
+        로컬 키워드 점검이므로 의미의 정확성은 모범 표현과 직접 비교하세요.
+      </p>
+    </section>
   )
 }
 
@@ -1900,12 +2232,13 @@ function TermActions({
   reviewSchedule,
   onToggleFavorite,
   onUpdateReviewStatus,
+  sticky = false,
 }: Pick<
   TermActionProps,
   'term' | 'isFavorite' | 'reviewStatus' | 'reviewSchedule' | 'onToggleFavorite' | 'onUpdateReviewStatus'
->) {
+> & { sticky?: boolean }) {
   return (
-    <>
+    <div className={`study-action-dock ${sticky ? 'sticky' : ''}`}>
       {reviewSchedule && (
         <p className="review-schedule-note">
           다음 복습: {formatReviewDate(reviewSchedule.nextReviewDate)} · 간격{' '}
@@ -1938,8 +2271,45 @@ function TermActions({
           중요 저장
         </button>
       </div>
-    </>
+    </div>
   )
+}
+
+function analyzeInstructionDraft(value: string): InstructionChecklistResult[] {
+  const meaningfulText = value
+    .split(/\r?\n/)
+    .filter(
+      (line) =>
+        !/^(목표|입력 자료|허용\/금지 경계|출력 형식|검증 기준|goal|input material|scope|output format|validation criteria)\s*:\s*$/i.test(
+          line.trim(),
+        ),
+    )
+    .join(' ')
+
+  return instructionElementDefinitions.map((item) => ({
+    id: item.id,
+    label: item.label,
+    passed: item.pattern.test(meaningfulText),
+    hint: item.hint,
+  }))
+}
+
+function appendMissingInstructionFields(value: string) {
+  const current = value.trimEnd()
+  if (!current.trim()) {
+    return instructionTemplate
+  }
+
+  const currentLines = current.split(/\r?\n/).map((line) => line.trim())
+  const missingLines = analyzeInstructionDraft(current)
+    .filter(
+      (item) =>
+        !item.passed &&
+        !currentLines.some((line) => line.startsWith(instructionTemplateFields[item.id])),
+    )
+    .map((item) => `${instructionTemplateFields[item.id]}:`)
+
+  return missingLines.length > 0 ? `${current}\n\n${missingLines.join('\n')}` : current
 }
 
 function getUsageLabel(term: DevTerm) {

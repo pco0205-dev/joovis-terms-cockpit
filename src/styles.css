@@ -265,6 +265,18 @@ h3 {
   background: color-mix(in srgb, var(--panel) 88%, var(--review-soft));
 }
 
+.deck-intro.deck-investment-analysis {
+  background: color-mix(in srgb, var(--panel) 86%, var(--known-soft));
+}
+
+.deck-intro.deck-roblox {
+  background: color-mix(in srgb, var(--panel) 88%, var(--favorite-soft));
+}
+
+.deck-intro.deck-foundry-lab {
+  background: color-mix(in srgb, var(--panel) 86%, var(--accent-soft));
+}
+
 .mode-nav {
   display: flex;
   gap: 0.45rem;
@@ -599,6 +611,19 @@ h3 {
   background: var(--panel-strong);
 }
 
+.architecture-status-badge {
+  display: inline-flex;
+  min-height: 1.8rem;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: 8px;
+  padding: 0.2rem 0.5rem;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--panel) 78%, var(--accent-soft));
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
 .status-badges {
   display: flex;
   flex-wrap: wrap;
@@ -693,6 +718,13 @@ h3 {
 
 .detail-block.mental {
   border-left-color: #30a899;
+}
+
+.detail-block.status {
+  border-left-color: var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 0.58rem 0.7rem;
+  background: color-mix(in srgb, var(--panel) 88%, var(--accent-soft));
 }
 
 .detail-block span,

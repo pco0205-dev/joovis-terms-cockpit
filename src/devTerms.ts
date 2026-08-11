@@ -1,5 +1,9 @@
 import type { DeckId, DevTerm, Difficulty, RawDevTerm } from './types'
+import { domainStructureTerms } from './domainStructureTerms'
 import { futureTerms } from './futureTerms'
+import { investmentArchitectureTerms } from './investmentArchitectureTerms'
+import { investmentRobloxTerms } from './investmentRobloxTerms'
+import { professionalBridgeTerms } from './professionalBridgeTerms'
 import { getTermCuration } from './termCuration'
 import { buildFallbackDepth } from './termDepth'
 
@@ -2142,6 +2146,10 @@ const addedTerms = [
   ...aiExpressionTerms,
   ...researchPromptTerms,
   ...futureTerms,
+  ...investmentRobloxTerms,
+  ...domainStructureTerms,
+  ...investmentArchitectureTerms,
+  ...professionalBridgeTerms,
 ] satisfies RawDevTerm[]
 
 function makeResearchPromptTerm(seed: ResearchPromptSeed): RawDevTerm {
@@ -2378,6 +2386,9 @@ function buildDataset(legacy: RawDevTerm[], additions: RawDevTerm[]) {
       development: 0,
       'libraries-tools': 0,
       'joovis-architecture': 0,
+      'investment-analysis': 0,
+      roblox: 0,
+      'foundry-lab': 0,
       'dispute-integration': 0,
     } satisfies Record<DeckId, number>,
     priorityCounts: {
@@ -2478,6 +2489,12 @@ function getDefaultRelatedTerms(term: DevTerm) {
       return ['Dependency', 'Runtime', 'Build', 'Validation']
     case 'joovis-architecture':
       return ['Current Truth', 'Boundary Ledger', 'Review Gate', 'State Capsule']
+    case 'investment-analysis':
+      return ['Investment Thesis', 'Margin of Safety', 'Position Sizing', 'Form 10-K']
+    case 'roblox':
+      return ['Roblox Platform', 'Bookings', 'DAU', 'Creator Economy']
+    case 'foundry-lab':
+      return ['Agent Loop', 'Harness Engineering', 'Tool Calling', 'Evaluation']
     case 'dispute-integration':
       return ['원본대조', '출처추적', '인용안전등급', '민감정보']
   }
@@ -2528,6 +2545,12 @@ function getDomainLabel(deck: DeckId) {
       return '라이브러리/도구'
     case 'joovis-architecture':
       return 'JOOVIS'
+    case 'investment-analysis':
+      return '투자 구조'
+    case 'roblox':
+      return 'Roblox'
+    case 'foundry-lab':
+      return 'Foundry Lab'
     case 'dispute-integration':
       return '분쟁통합'
   }

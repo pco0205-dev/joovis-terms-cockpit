@@ -6,6 +6,13 @@ export const deckDefinitions = [
     helperText: '모호한 지시를 줄이고 GPT/Codex에 명확하게 명령하는 표현을 익히는 공간입니다.',
   },
   {
+    id: 'foundry-lab',
+    label: 'Foundry Lab',
+    title: 'Foundry Lab 구조 학습장',
+    helperText:
+      '에이전트, 하네스, 컨텍스트, 도구, 검색, 평가와 관측을 연결하는 공개·일반 개념 지도입니다. 비공개 구현 현황을 추정하지 않습니다.',
+  },
+  {
     id: 'development',
     label: '개발 기본',
     title: '개발 기본 학습장',
@@ -22,6 +29,20 @@ export const deckDefinitions = [
     label: 'JOOVIS',
     title: 'JOOVIS 아키텍처 학습장',
     helperText: 'JOOVIS 내부 설계 언어와 운영 개념을 분리해서 익히는 공간입니다.',
+  },
+  {
+    id: 'investment-analysis',
+    label: '투자 구조',
+    title: 'JOOVIS 투자 구조 학습장',
+    helperText:
+      '데이터 수집부터 판단·위험·검증·실행 경계까지 익히는 학습용 개념 지도입니다. 비공개 구현 현황이나 매수·매도 추천이 아닙니다.',
+  },
+  {
+    id: 'roblox',
+    label: 'Roblox',
+    title: 'Roblox 구조 학습장',
+    helperText:
+      'Roblox의 플랫폼·클라이언트/서버·복제·데이터·LiveOps·창작자 경제 용어를 익힙니다.',
   },
   {
     id: 'dispute-integration',
@@ -42,6 +63,8 @@ export type LearningScope = 'core' | 'all'
 export type RecallMode = 'english-korean' | 'korean-english' | 'mechanism'
 
 export type ReviewStatus = 'known' | 'review_again'
+
+export type ArchitectureStatus = 'current' | 'target' | 'concept'
 
 export type ReviewSchedule = {
   nextReviewDate: string
@@ -85,6 +108,8 @@ export type DevTerm = {
   commonPitfall?: string
   expertNote?: string
   researchBasis?: string
+  architectureStatus?: ArchitectureStatus
+  statusNote?: string
   mentalModel?: string
   whyItMatters?: string
   withoutIt?: string

@@ -27,6 +27,44 @@ const codexAppSource = 'https://openai.com/index/introducing-the-codex-app/'
 const mcpArchitectureSource = 'https://modelcontextprotocol.io/docs/learn/architecture'
 const mcpClientSource = 'https://modelcontextprotocol.io/docs/learn/client-concepts'
 
+const foundryLabTermNames = new Set([
+  'Context Engineering',
+  'Context Window',
+  'Lost in the Middle',
+  'Agent Loop',
+  'Harness Engineering',
+  'Eval-driven Development',
+  'Execution Trace',
+  'Long-Horizon Task',
+  'LLM-as-a-Judge',
+  'Judge Bias',
+  'Context Compaction',
+  'Agent Supervision',
+  'Deterministic Verification',
+  'Feedback Loop',
+  'Execution-based Evaluation',
+  'Benchmark Contamination',
+  'Evals',
+  'Tool Calling',
+  'Guardrail',
+  'Retrieval-Augmented Generation',
+  'Embedding',
+  'Vector Database',
+  'Reranker',
+  'Observability',
+  'Trace Span',
+  'Prompt Caching',
+  'Computer Use',
+  'Model Routing',
+  'Multimodal Input',
+  'SWE-bench',
+  'Recall',
+  'Precision',
+  'Latency',
+  'Throughput',
+  'Model Context Protocol',
+])
+
 export const futureTerms = [
   makeFutureTerm({
     deck: 'ai-command',
@@ -849,12 +887,13 @@ function makeMcpRole(
 }
 
 function makeFutureTerm(seed: FutureTermSeed): RawDevTerm {
-  const domainLabel = getDomainLabel(seed.deck)
+  const deck: DeckId = foundryLabTermNames.has(seed.term) ? 'foundry-lab' : seed.deck
+  const domainLabel = getDomainLabel(deck)
   const goodExpression = seed.promptEn ? `${seed.promptKo}\nEN: ${seed.promptEn}` : seed.promptKo
 
   return {
-    id: `future-${seed.deck}-${slugify(seed.term)}`,
-    deck: seed.deck,
+    id: `future-${deck}-${slugify(seed.term)}`,
+    deck,
     domainLabel,
     term: seed.term,
     pronunciation: seed.pronunciation,
@@ -862,17 +901,24 @@ function makeFutureTerm(seed: FutureTermSeed): RawDevTerm {
     simpleMeaning: seed.simpleMeaning,
     category: seed.category,
     difficulty: seed.difficulty,
+    architectureStatus: deck === 'foundry-lab' ? 'concept' : undefined,
+    statusNote:
+      deck === 'foundry-lab'
+        ? '공개 AI 시스템·하네스·평가 원리를 바탕으로 한 학습용 개념 모델입니다. 비공개 Foundry Lab 구현 상태를 확인하거나 단정한 내용은 아닙니다.'
+        : undefined,
     joovisUsage:
-      seed.deck === 'dispute-integration'
+      deck === 'dispute-integration'
         ? undefined
-        : `${seed.term}을 실제 AI·개발 작업의 흐름과 검증 기준을 설명하는 데 사용합니다.`,
+        : deck === 'foundry-lab'
+          ? `${seed.term}을 Foundry Lab의 Context → Agent Loop → Tool → Trace → Eval 흐름에서 설명하는 데 사용합니다.`
+          : `${seed.term}을 실제 AI·개발 작업의 흐름과 검증 기준을 설명하는 데 사용합니다.`,
     disputeUsage:
-      seed.deck === 'dispute-integration'
+      deck === 'dispute-integration'
         ? `${seed.term}을 일반적인 증거·문서 검토 절차를 설명하는 데 사용합니다.`
         : undefined,
     checkQuestion: `${seed.term}은 어떤 입력을 받아 어떤 과정을 거치며, 실패를 무엇으로 확인하나요?`,
-    badExpression: seed.deck === 'ai-command' ? 'AI가 알아서 가장 좋은 방식으로 해줘.' : undefined,
-    goodExpression: seed.deck === 'ai-command' ? goodExpression : undefined,
+    badExpression: deck === 'ai-command' || deck === 'foundry-lab' ? 'AI가 알아서 가장 좋은 방식으로 해줘.' : undefined,
+    goodExpression: deck === 'ai-command' || deck === 'foundry-lab' ? goodExpression : undefined,
     gptPromptExample: seed.promptEn ?? seed.promptKo,
     codexPromptExample: seed.promptKo,
     mentalModel: seed.mentalModel,
@@ -893,6 +939,9 @@ function getDomainLabel(deck: DeckId) {
   if (deck === 'development') return '개발 기본'
   if (deck === 'libraries-tools') return '라이브러리/도구'
   if (deck === 'joovis-architecture') return 'JOOVIS'
+  if (deck === 'investment-analysis') return '투자 구조'
+  if (deck === 'roblox') return 'Roblox'
+  if (deck === 'foundry-lab') return 'Foundry Lab'
   return '분쟁통합'
 }
 

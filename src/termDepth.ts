@@ -70,6 +70,42 @@ const deckProfiles: Record<DevTerm['deck'], DepthProfile> = {
     usage: '긴 작업의 상태, 책임, 검토, 인수인계를 같은 언어로 통제할 때 사용합니다.',
     pitfall: '이름을 붙이는 것만으로 구조가 생기지 않습니다. 실제 파일, 상태 필드, 판정 규칙, 소유자를 함께 지정해야 합니다.',
   },
+  'investment-analysis': {
+    spatialModel:
+      '왼쪽의 원천 데이터가 표준화·품질 검사를 지나 Feature와 Signal이 되고, 가운데의 위험·포트폴리오 판단을 거쳐 오른쪽의 주문·실행·장부·검토로 흐르는 지도에서 이 개념의 위치를 찾으면 됩니다.',
+    why: '시장·재무 용어뿐 아니라 데이터, 판단, 상태, 실행의 책임 경계를 알아야 시스템 설명을 따라가고 숫자의 출처와 사용 조건을 확인할 수 있습니다.',
+    failure: '원천 관찰값, 계산된 Signal, 투자 판단, 실행 상태를 뒤섞으면 좋은 숫자를 곧바로 행동 명령으로 오해하거나 잘못된 단계에서 문제를 고치게 됩니다.',
+    mechanism:
+      '원천 데이터에 시점·출처를 붙여 내부 표준으로 변환하고, 검증된 Feature와 Signal만 위험·포트폴리오 정책에 전달합니다. 승인된 판단은 실행 경계를 통과하며 결과는 Ledger와 Audit Trail로 다시 대조됩니다.',
+    workflow:
+      '용어를 들으면 upstream 입력, source of truth, 변환 규칙, 소유 상태, downstream 출력, 검증·차단 조건을 차례로 적고 실제 구현 여부는 별도 근거로 확인합니다.',
+    usage: 'JOOVIS 투자 관련 구조 대화와 일반 투자 시스템 문서를 데이터 → 판단 → 실행 → 검토의 흐름으로 해석할 때 사용합니다.',
+    pitfall: '이 학습 설명을 비공개 JOOVIS 구현의 사실이나 단독 매수·매도 신호로 간주하지 말고 실제 계약·공시·검증 결과를 따로 확인해야 합니다.',
+  },
+  roblox: {
+    spatialModel:
+      '휴대폰의 Client, 권한을 가진 Server, 공유되는 Replication 계층, 영속 DataStore와 임시 MemoryStore, 여러 Place를 잇는 서비스, 그리고 바깥의 Creator·Discovery·경제·LiveOps 층으로 나누어 이 개념의 위치를 찾으면 됩니다.',
+    why: 'Roblox 대화에서 제품 지표와 게임 구조, Client 표시와 Server 진실, 영속 저장과 세션 상태를 구분해 들을 수 있게 합니다.',
+    failure: 'Client 값을 신뢰하거나 모든 상태를 한 저장소에 넣고, 게임 성능·경제·사업 지표를 한 층의 문제처럼 다루게 됩니다.',
+    mechanism:
+      'Server가 권위 있는 상태를 계산하고 필요한 일부가 Client에 복제됩니다. Experience 상태는 목적에 따라 영속·임시 저장소로 나뉘며 Telemetry와 LiveOps 실험이 플레이 흐름과 경제 결과를 관측합니다.',
+    workflow:
+      '용어를 들으면 Client/Server 위치, 복제 여부, 상태 소유자, 저장 수명, 실패·재시도, 관측 지표를 확인한 뒤 Creator·경제·사업 영향과 연결합니다.',
+    usage: 'Roblox 공식 문서와 구조 대화를 Client → Server → Data → LiveOps → Creator Economy의 지도에서 해석할 때 사용합니다.',
+    pitfall: '공개 Roblox 개념을 특정 팀의 내부 구현과 같다고 추정하지 말고, 회사 공시의 사실·공식 API 계약·팀 고유 명칭을 각각 분리해 확인해야 합니다.',
+  },
+  'foundry-lab': {
+    spatialModel:
+      '모델이 있는 작업장을 Context, Model, Harness, Tool, State, Retrieval, Trace, Eval, Recovery 작업대로 나누고 이 개념이 어느 작업대에 있는지 찾으면 됩니다.',
+    why: '모델 자체 능력과 Harness·도구·데이터·평가 품질을 분리해 대화 중 정확한 책임 위치와 개선 지점을 찾게 합니다.',
+    failure: '모든 문제를 모델이나 Prompt 탓으로 돌리고 실제 Tool 권한, Context 오염, 검색 누락, 평가 결함, 복구 경로를 놓칠 수 있습니다.',
+    mechanism:
+      '목표와 Context가 모델의 다음 선택을 만들고 Harness가 Tool과 상태를 실행하며 Retrieval이 근거를 공급합니다. Trace와 Eval은 결과를 관측해 다음 개선 Loop로 돌려보냅니다.',
+    workflow:
+      'Task와 성공 기준을 고정한 뒤 Context, Capability, Agent Loop, Tool, 상태 전이, Retrieval, 관측, 평가, 복구를 차례로 확인합니다.',
+    usage: 'Foundry Lab의 설계 대화와 에이전트 시스템 문서를 책임 층별로 해석할 때 사용합니다.',
+    pitfall: '전문용어 이름보다 입력·출력·상태 소유자·실패·검증이 실제 어느 계약과 기록에 있는지 확인해야 합니다.',
+  },
   'dispute-integration': {
     spatialModel:
       '원본 보관함, 검토 대기함, 쟁점 연결표, 인용 가능 구역, 민감정보 제한 구역 중 어디에 놓이는 정보인지 구분하면 됩니다.',

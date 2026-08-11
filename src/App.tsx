@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { datasetStats, devTerms } from './devTerms'
 import {
   deckDefinitions,
+  type ArchitectureStatus,
   type DeckId,
   type DevTerm,
   type Difficulty,
@@ -76,12 +77,16 @@ const modes: Array<{ id: Mode; label: string; description: string }> = [
   { id: 'today', label: '오늘', description: '하루 1개' },
   { id: 'random', label: '랜덤', description: '새 카드' },
   { id: 'review', label: '다시 보기', description: '모르는 것' },
-  { id: 'training', label: 'AI 훈련', description: '지시문 연습' },
+  { id: 'training', label: '질문 훈련', description: '표현 연습' },
   { id: 'search', label: '전체 검색', description: '찾아보기' },
   { id: 'interpret', label: '보고서', description: '용어 해석' },
 ]
 
 const guideItems = [
+  {
+    title: 'Deck 선택',
+    body: 'AI 지휘·Foundry Lab·개발·JOOVIS·투자 구조·Roblox·분쟁통합을 섞지 않고 목적별 학습장으로 나눠 씁니다.',
+  },
   {
     title: '학습 범위',
     body: '처음에는 핵심 학습으로 반복하고, 전문 용어가 필요할 때 전체 사전과 검색을 사용합니다.',
@@ -90,7 +95,7 @@ const guideItems = [
   { title: '오늘', body: '회상 방향을 고르고 답을 떠올린 뒤 정답을 확인합니다.' },
   { title: '랜덤', body: '한 바퀴 동안 중복 없이 새 용어를 능동 회상합니다.' },
   { title: '다시 보기', body: '모르는 용어만 다시 봅니다.' },
-  { title: 'AI 훈련', body: '목표·입력·경계·출력·검증을 채우고 한국어/영어 모범 표현과 비교합니다.' },
+  { title: '질문 훈련', body: '목표·입력·경계·출력·검증을 채우고 덱에 맞는 한국어/영어 모범 표현과 비교합니다.' },
   { title: '전체 검색', body: 'Codex 보고서에서 모르는 단어를 찾습니다.' },
   { title: '보고서', body: '긴 문장을 붙여 넣고 앱의 용어와 표현을 찾아봅니다.' },
 ]
@@ -497,7 +502,7 @@ function App() {
   const randomDone = (randomPracticeCounts[activeDeck] ?? 0) >= 5
   const reviewGoal = Math.min(5, Math.max(deckDueReviewCount, deckReviewedTodayCount))
   const reviewDone = reviewGoal === 0 || deckReviewedTodayCount >= reviewGoal
-  const aiTrainingDone = (trainingPracticeCounts['ai-command'] ?? 0) >= 2
+  const deckTrainingDone = (trainingPracticeCounts[activeDeck] ?? 0) >= 2
   const searchDone = routineChecks.includes('search')
 
   const reviewTerms = useMemo(
@@ -555,6 +560,8 @@ function App() {
           term.commonPitfall,
           term.expertNote,
           term.researchBasis,
+          term.architectureStatus,
+          term.statusNote,
           term.selectionReason,
           term.learningPriority,
           term.relatedTerms?.join(' '),
@@ -972,16 +979,11 @@ function App() {
     },
     {
       id: 'training',
-      title: 'AI 지휘 표현 2개',
-      progress: `${Math.min(trainingPracticeCounts['ai-command'] ?? 0, 2)} / 2`,
-      done: aiTrainingDone,
-      actionLabel: 'AI 훈련',
-      action: () => {
-        if (activeDeck !== 'ai-command') {
-          selectDeck('ai-command')
-        }
-        selectMode('training')
-      },
+      title: '질문 훈련 2개',
+      progress: `${Math.min(trainingPracticeCounts[activeDeck] ?? 0, 2)} / 2`,
+      done: deckTrainingDone,
+      actionLabel: '질문 훈련',
+      action: () => selectMode('training'),
     },
     {
       id: 'search',
@@ -999,7 +1001,7 @@ function App() {
     <main className="app-shell">
       <header className="app-header">
         <div>
-          <p className="eyebrow">AI · 개발 · 도구 · 아키텍처</p>
+          <p className="eyebrow">AI · Foundry · 투자 구조 · Roblox</p>
           <h1>JOOVIS Terms Cockpit</h1>
         </div>
         <div className="header-actions">
@@ -1110,7 +1112,7 @@ function App() {
               <p className="eyebrow">Daily loop</p>
               <h3>{isRoutineComplete ? '오늘 완료' : `${routineCompletedCount} / ${routineItems.length}`}</h3>
               <p>
-                오늘 · 랜덤 · 다시 보기 · AI 지휘 훈련 · 검색 연습을 짧게 한 바퀴 돕니다.
+                오늘 · 랜덤 · 다시 보기 · 질문 훈련 · 검색 연습을 짧게 한 바퀴 돕니다.
               </p>
             </div>
             <span>{activeDeckDefinition.label}</span>
@@ -1263,8 +1265,8 @@ function App() {
 
       {activeMode === 'training' && (
         <ModePanel
-          title={activeDeck === 'dispute-integration' ? '표현 판정 훈련' : 'AI 지휘 훈련'}
-          subtitle="모호한 표현을 먼저 보고, 더 정확한 한국어/영어 지시문으로 바꿔보는 모드입니다."
+          title={getTrainingTitle(activeDeck)}
+          subtitle={getTrainingSubtitle(activeDeck)}
         >
           <div className="training-summary">
             <span>오늘 훈련 {trainingPracticeCounts[activeDeck] ?? 0}개</span>
@@ -1282,6 +1284,7 @@ function App() {
                   <span className={`priority-badge priority-${trainingTerm.learningPriority}`}>
                     {getPriorityLabel(trainingTerm.learningPriority)}
                   </span>
+                  <ArchitectureStatusBadge term={trainingTerm} />
                 </div>
                 <StatusBadges
                   isFavorite={favoriteIds.has(trainingTerm.id)}
@@ -1345,7 +1348,7 @@ function App() {
               )}
             </section>
           ) : (
-            <EmptyStateCard message="현재 Deck/난이도에는 지시문 훈련 카드가 없습니다. AI 지휘 Deck 또는 전체 난이도로 바꿔보세요." />
+            <EmptyStateCard message="현재 Deck/학습 범위에는 질문 훈련 카드가 없습니다. 전체 학습으로 바꾸거나 다른 Deck을 선택해 주세요." />
           )}
 
           <section className="expression-vault" aria-label="내 표현 저장소">
@@ -1768,6 +1771,7 @@ function StudyCard({
           <span className={`priority-badge priority-${term.learningPriority}`}>
             {getPriorityLabel(term.learningPriority)}
           </span>
+          <ArchitectureStatusBadge term={term} />
         </div>
         <StatusBadges isFavorite={isFavorite} reviewStatus={reviewStatus} />
       </div>
@@ -1811,6 +1815,7 @@ function StudyCard({
 
           <p className="korean-meaning">{term.koreanMeaning}</p>
           <p className="simple-meaning">{term.simpleMeaning}</p>
+          <ArchitectureStatusBlock term={term} />
 
           <TermActions
             term={term}
@@ -1950,6 +1955,7 @@ function CompactTermCard({
             <span className={`priority-badge priority-${term.learningPriority}`}>
               {getPriorityLabel(term.learningPriority)}
             </span>
+            <ArchitectureStatusBadge term={term} />
           </div>
           <h3>{term.term}</h3>
           <p className="compact-pronunciation">{term.pronunciation}</p>
@@ -1966,6 +1972,7 @@ function CompactTermCard({
       {isExpanded && (
         <div className="compact-details">
           <p className="simple-meaning">{term.simpleMeaning}</p>
+          <ArchitectureStatusBlock term={term} />
           <DetailBlock label={getUsageLabel(term)} tone="usage">
             {getUsageText(term)}
           </DetailBlock>
@@ -2015,9 +2022,36 @@ function StatusBadges({ isFavorite, reviewStatus }: StatusBadgesProps) {
   )
 }
 
+function ArchitectureStatusBadge({ term }: { term: DevTerm }) {
+  if (!term.architectureStatus) {
+    return null
+  }
+
+  return (
+    <span className={`architecture-status-badge architecture-${term.architectureStatus}`}>
+      {getArchitectureStatusLabel(term.architectureStatus)}
+    </span>
+  )
+}
+
+function ArchitectureStatusBlock({ term }: { term: DevTerm }) {
+  if (!term.architectureStatus || !term.statusNote) {
+    return null
+  }
+
+  return (
+    <DetailBlock
+      label={`구조 상태 · ${getArchitectureStatusLabel(term.architectureStatus)}`}
+      tone="status"
+    >
+      {term.statusNote}
+    </DetailBlock>
+  )
+}
+
 type DetailBlockProps = {
   label: string
-  tone: 'usage' | 'question' | 'expression' | 'caution' | 'mechanism' | 'mental'
+  tone: 'usage' | 'question' | 'expression' | 'caution' | 'mechanism' | 'mental' | 'status'
   children: string
 }
 
@@ -2166,7 +2200,9 @@ function PromptBlock({ term }: { term: DevTerm }) {
             ? 'English command'
             : term.deck === 'dispute-integration'
               ? 'GPT 프롬프트 예시'
-              : '프롬프트 예시'}
+              : term.deck === 'investment-analysis' || term.deck === 'roblox'
+                ? '분석 질문 예시'
+                : '프롬프트 예시'}
         </span>
         <button type="button" onClick={copyPrompt}>
           {copyState === 'copied'
@@ -2313,7 +2349,69 @@ function appendMissingInstructionFields(value: string) {
 }
 
 function getUsageLabel(term: DevTerm) {
-  return term.deck === 'dispute-integration' ? '분쟁통합 사용 예' : '학습 사용 예'
+  if (term.deck === 'dispute-integration') {
+    return '분쟁통합 사용 예'
+  }
+  if (term.deck === 'investment-analysis') {
+    return '투자 구조에서 쓰는 법'
+  }
+  if (term.deck === 'roblox') {
+    return 'Roblox 구조에서 쓰는 법'
+  }
+  if (term.deck === 'foundry-lab') {
+    return 'Foundry 구조에서 쓰는 법'
+  }
+  return '학습 사용 예'
+}
+
+function getTrainingTitle(deck: DeckId) {
+  if (deck === 'ai-command') {
+    return 'AI 지휘 훈련'
+  }
+  if (deck === 'dispute-integration') {
+    return '표현 판정 훈련'
+  }
+  if (deck === 'investment-analysis') {
+    return '투자 구조 질문 훈련'
+  }
+  if (deck === 'roblox') {
+    return 'Roblox 구조 질문 훈련'
+  }
+  if (deck === 'foundry-lab') {
+    return 'Foundry 구조 질문 훈련'
+  }
+  if (deck === 'development') {
+    return '개발 구조 질문 훈련'
+  }
+  if (deck === 'libraries-tools') {
+    return '도구 활용 질문 훈련'
+  }
+  return 'JOOVIS 구조 질문 훈련'
+}
+
+function getTrainingSubtitle(deck: DeckId) {
+  if (deck === 'ai-command') {
+    return '모호한 표현을 더 정확한 한국어/영어 지시문으로 바꾸고, 목표·경계·출력·검증 조건을 직접 채워봅니다.'
+  }
+  if (deck === 'dispute-integration') {
+    return '자료, 주장, 원본대조, 인용 가능 범위와 민감정보 조건을 분리해 안전한 검토 질문으로 바꿉니다.'
+  }
+  if (deck === 'investment-analysis') {
+    return '용어를 데이터 입력, 변환, 상태, 검증, 실행 경계로 나눠 시스템 안의 위치를 묻는 질문으로 바꿉니다.'
+  }
+  if (deck === 'roblox') {
+    return '용어를 Client/Server, 복제, 저장 수명, 실패 처리, 관측 지표로 나눠 구조를 확인하는 질문으로 바꿉니다.'
+  }
+  if (deck === 'foundry-lab') {
+    return '용어를 Context, Model, Harness, Tool, State, Eval, 복구 책임으로 나눠 구조를 확인하는 질문으로 바꿉니다.'
+  }
+  if (deck === 'development') {
+    return '입력, 처리, 상태, 출력, 오류 경계로 나눠 코드와 시스템의 작동 원리를 묻는 질문으로 바꿉니다.'
+  }
+  if (deck === 'libraries-tools') {
+    return '도구의 책임, 입력·출력, 실행 시점, 대체 수단과 실패 조건을 구분해 실제 활용 질문으로 바꿉니다.'
+  }
+  return '용어를 소유권, 상태, 경계, 전이, 검증 책임으로 나눠 JOOVIS 구조를 읽는 질문으로 바꿉니다.'
 }
 
 function getUsageText(term: DevTerm) {
@@ -2330,6 +2428,16 @@ function getDifficultyLabel(difficulty: DevTerm['difficulty']) {
     return '중급'
   }
   return '고급'
+}
+
+function getArchitectureStatusLabel(status: ArchitectureStatus) {
+  if (status === 'current') {
+    return '현재 확인'
+  }
+  if (status === 'target') {
+    return '목표 구조'
+  }
+  return '개념 모델'
 }
 
 function getPriorityLabel(priority: DevTerm['learningPriority']) {

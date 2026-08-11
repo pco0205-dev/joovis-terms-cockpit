@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    // The static glossary stays in one offline-ready bundle and transfers at roughly 160 kB gzip.
-    chunkSizeWarningLimit: 600,
+    // Keep the full offline glossary in one cacheable bundle; it remains about 230 kB gzip.
+    chunkSizeWarningLimit: 800,
   },
 })

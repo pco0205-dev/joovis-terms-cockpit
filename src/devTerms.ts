@@ -3,6 +3,7 @@ import { domainStructureTerms } from './domainStructureTerms'
 import { futureTerms } from './futureTerms'
 import { investmentArchitectureTerms } from './investmentArchitectureTerms'
 import { investmentRobloxTerms } from './investmentRobloxTerms'
+import { internalArchitectureTerms } from './internalArchitectureTerms'
 import { professionalBridgeTerms } from './professionalBridgeTerms'
 import { getTermCuration } from './termCuration'
 import { buildFallbackDepth } from './termDepth'
@@ -2149,6 +2150,7 @@ const addedTerms = [
   ...investmentRobloxTerms,
   ...domainStructureTerms,
   ...investmentArchitectureTerms,
+  ...internalArchitectureTerms,
   ...professionalBridgeTerms,
 ] satisfies RawDevTerm[]
 

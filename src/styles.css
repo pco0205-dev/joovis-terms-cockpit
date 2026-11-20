@@ -1243,10 +1243,15 @@ h3 {
 }
 
 .instruction-composer,
+.composer-pickers,
 .composer-fields {
   display: grid;
   gap: 0.9rem;
   min-width: 0;
+}
+
+.next-intent {
+  justify-self: end;
 }
 
 .composer-field {
@@ -1634,6 +1639,10 @@ h3 {
 
   .app-brand h1 {
     font-size: 1.35rem;
+  }
+
+  .composer-pickers {
+    grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr);
   }
 
   .compact-list {

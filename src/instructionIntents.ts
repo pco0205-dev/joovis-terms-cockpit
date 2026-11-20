@@ -1,3 +1,5 @@
+import { instructionStudyFamilies } from './instructionStudyFamilies'
+
 export type IntentChoice = {
   label: string
   meaning: string
@@ -5,10 +7,12 @@ export type IntentChoice = {
 }
 
 export const intentDomains = ['지시', '개발', '연구'] as const
+export const intentLevels = ['기초', '실무', '심화'] as const
 
-type IntentFamily = {
+export type IntentFamily = {
   id: string
   domain: typeof intentDomains[number]
+  level: typeof intentLevels[number]
   label: string
   cues: string[]
   question: string
@@ -21,6 +25,7 @@ export const intentFamilies = [
   {
     id: 'check',
     domain: '지시',
+    level: '기초',
     label: '확인 · 검토 · 검증',
     cues: ['확인', '검토', '검증', '점검', '봐줘', '맞아', '됐나', '문제없는지'],
     question: '지금 상태만 알고 싶은가요, 문제를 찾고 싶은가요, 기준에 맞는지 증명하고 싶은가요?',
@@ -38,6 +43,7 @@ export const intentFamilies = [
   {
     id: 'change',
     domain: '개발',
+    level: '기초',
     label: '수정 · 개선 · 단순화',
     cues: ['수정', '개선', '단순화', '정리해줘', '복잡', '불편', '고쳐', '바꿔', '다듬'],
     question: '틀린 동작을 고치는 건가요, 사용성을 높이는 건가요, 선택지를 줄이는 건가요?',
@@ -55,6 +61,7 @@ export const intentFamilies = [
   {
     id: 'release',
     domain: '개발',
+    level: '실무',
     label: '반영 · 배포 · 적용 확인',
     cues: ['적용', '반영', '배포', '푸시', '푸쉬', '업데이트', '새버전'],
     question: '코드를 바꿀까요, 새 버전을 공개할까요, 실제 앱에서 새 버전이 보이는지 확인할까요?',
@@ -72,6 +79,7 @@ export const intentFamilies = [
   {
     id: 'thinking',
     domain: '지시',
+    level: '기초',
     label: '의도 · 방향 · 우선순위',
     cues: ['의도', '방향', '우선순위', '머릿속', '정체성', '먼저할', '목표', '생각'],
     question: '왜 원하는지, 어느 쪽으로 갈지, 무엇부터 할지 중 지금 막힌 것은 무엇인가요?',
@@ -89,6 +97,7 @@ export const intentFamilies = [
   {
     id: 'limits',
     domain: '지시',
+    level: '실무',
     label: '대상 · 범위 · 경계',
     cues: ['범위', '경계', '읽기전용', '어디까지', '손대지', '유지', '권한', '대상'],
     question: '어떤 대상을 다룰지, 어디까지 할지, 어떤 행동을 금지할지 정해봤나요?',
@@ -106,6 +115,7 @@ export const intentFamilies = [
   {
     id: 'decision',
     domain: '지시',
+    level: '실무',
     label: '비교 · 판단 · 결정',
     cues: ['비교', '판단', '결정', '선택', '추천', '장단점', '뭐가좋아', '뭐가나아'],
     question: '차이를 나란히 보고 싶나요, 조건에 맞는지 평가하고 싶나요, 하나를 골라야 하나요?',
@@ -123,6 +133,7 @@ export const intentFamilies = [
   {
     id: 'evidence',
     domain: '연구',
+    level: '기초',
     label: '사실 · 추정 · 근거',
     cues: ['근거', '추정', '추측', '사실', '확실', '무슨이유', '왜이런'],
     question: '직접 본 것, 그렇게 해석한 이유, 아직 모르는 것을 구분할 수 있나요?',
@@ -140,6 +151,7 @@ export const intentFamilies = [
   {
     id: 'design',
     domain: '개발',
+    level: '기초',
     label: '설계 · 구현 · 완료 기준',
     cues: ['설계', '구현', '만들어', '어떻게할', '계획', '완료기준'],
     question: '작업 방법을 먼저 그리고 싶은가요, 실제 변경이 필요한가요, 끝났는지 판단할 기준이 필요한가요?',
@@ -157,6 +169,7 @@ export const intentFamilies = [
   {
     id: 'errors',
     domain: '개발',
+    level: '실무',
     label: '재현 · 원인 분석 · 회귀 확인',
     cues: ['재현', '오류', '안돼', '깨져', '원인분석', '회귀', '버그'],
     question: '같은 문제가 다시 생기는 조건, 문제가 생긴 이유, 고친 뒤의 영향 중 무엇을 알고 싶나요?',
@@ -174,6 +187,7 @@ export const intentFamilies = [
   {
     id: 'structure',
     domain: '개발',
+    level: '실무',
     label: '구조 · 책임 · 연결 규칙',
     cues: ['구조', '모듈', '책임', '연결', '누가맡', '역할', '아키텍처', '구조도'],
     question: '어떻게 나뉘는지, 누가 맡는지, 두 부분이 어떻게 주고받는지 중 어디가 헷갈리나요?',
@@ -191,6 +205,7 @@ export const intentFamilies = [
   {
     id: 'hypothesis',
     domain: '연구',
+    level: '기초',
     label: '연구 질문 · 가설 · 반례',
     cues: ['가설', '반례', '연구질문', '원인이', '설명가능', '왜그럴'],
     question: '아직 답을 모르는 질문인가요, 검증해 볼 설명인가요, 그 설명이 틀릴 수 있는 사례인가요?',
@@ -208,6 +223,7 @@ export const intentFamilies = [
   {
     id: 'experiment',
     domain: '연구',
+    level: '실무',
     label: '변수 · 통제 조건 · 비교 기준',
     cues: ['실험', '변수', '통제', '비교기준', '측정', '평가방법', '성능차이'],
     question: '무엇을 바꾸고, 무엇을 그대로 두고, 어떤 값으로 변화를 확인할까요?',
@@ -222,10 +238,12 @@ export const intentFamilies = [
       instruction: '짧은 정의만 있는 카드와 작동 예시가 붙은 카드를 비교해줘. 단어 난이도는 맞추고, 다음 날 각자 예를 들 수 있는지를 같은 방법으로 확인해줘.',
     },
   },
+  ...instructionStudyFamilies,
 ] satisfies IntentFamily[]
 
 export type InstructionDraft = {
   original: string
+  level: typeof intentLevels[number] | '전체'
   familyId: string | null
   choiceLabel: string | null
   target: string
@@ -236,6 +254,7 @@ export type InstructionDraft = {
 
 export const emptyInstructionDraft: InstructionDraft = {
   original: '',
+  level: '전체',
   familyId: null,
   choiceLabel: null,
   target: '',
@@ -244,13 +263,13 @@ export const emptyInstructionDraft: InstructionDraft = {
   improvedKo: '',
 }
 
-export function findIntentFamily(original: string) {
+export function findIntentFamily(original: string, families: readonly IntentFamily[] = intentFamilies) {
   const text = original.normalize('NFKC').replace(/[^\p{L}\p{N}]+/gu, '')
   let bestScore = 0
   let bestPosition = Number.POSITIVE_INFINITY
-  let bestMatch = intentFamilies[0]
+  let bestMatch = families[0] ?? intentFamilies[0]
 
-  for (const family of intentFamilies) {
+  for (const family of families) {
     for (const cue of family.cues) {
       const position = text.indexOf(cue)
       if (position >= 0 && (cue.length > bestScore || (cue.length === bestScore && position < bestPosition))) {
@@ -262,7 +281,8 @@ export function findIntentFamily(original: string) {
   }
 
   if (bestScore === 0 && text.includes('연구')) {
-    return intentFamilies.find(({ id }) => id === 'hypothesis') ?? bestMatch
+    return families.find(({ id }) => id === 'hypothesis') ??
+      families.find(({ domain }) => domain === '연구') ?? bestMatch
   }
   return bestMatch
 }

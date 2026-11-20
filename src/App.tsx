@@ -927,7 +927,7 @@ function App() {
       saveSavedExpressions(next)
       return next
     })
-    setExpressionDraft(emptyInstructionDraft)
+    setExpressionDraft((current) => ({ ...emptyInstructionDraft, level: current.level }))
   }
 
   const deleteSavedExpression = (expressionId: string) => {

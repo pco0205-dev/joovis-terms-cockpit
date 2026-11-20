@@ -4,6 +4,7 @@ import {
   findIntentFamily,
   intentDomains,
   intentFamilies,
+  intentLevels,
   type InstructionDraft,
 } from './instructionIntents'
 
@@ -22,10 +23,15 @@ export default function InstructionComposer({
   onOpenRelatedTerm,
   getTermLabel,
 }: Props) {
-  const family = intentFamilies.find(({ id }) => id === draft.familyId) ?? findIntentFamily(draft.original)
+  const families = intentLevels
+    .filter((level) => draft.level === '전체' || level === draft.level)
+    .flatMap((level) => intentFamilies.filter((item) => item.level === level))
+  const family = families.find(({ id }) => id === draft.familyId) ?? findIntentFamily(draft.original, families)
+  const nextFamily = families[families.findIndex(({ id }) => id === family.id) + 1]
   const choice = family.choices.find(({ label }) => label === draft.choiceLabel)
   const canCreate = Boolean(choice && (draft.target.trim() || draft.outcome.trim()))
   const [feedback, setFeedback] = useState('')
+  const familyRef = useRef<HTMLSelectElement>(null)
   const resultRef = useRef<HTMLTextAreaElement>(null)
 
   const createInstruction = () => {
@@ -46,7 +52,42 @@ export default function InstructionComposer({
   }
 
   return (
-    <section className="instruction-composer" aria-label="지시문 만들기">
+    <section className="instruction-composer" aria-label="어휘와 지시 연습">
+      <div className="composer-pickers">
+        <div className="composer-field">
+          <label htmlFor="intent-level">학습 단계</label>
+          <select
+            id="intent-level"
+            value={draft.level}
+            onChange={(event) => onUpdate({
+              level: event.target.value as InstructionDraft['level'],
+              familyId: null,
+              choiceLabel: null,
+            })}
+          >
+            <option value="전체">전체 단계</option>
+            {intentLevels.map((level) => <option key={level} value={level}>{level}</option>)}
+          </select>
+        </div>
+        <div className="composer-field">
+          <label htmlFor="intent-family">어떤 표현을 비교할까요?</label>
+          <select
+            id="intent-family"
+            ref={familyRef}
+            value={family.id}
+            onChange={(event) => onUpdate({ familyId: event.target.value, choiceLabel: null })}
+          >
+            {intentDomains.map((domain) => (
+              <optgroup key={domain} label={domain}>
+                {families.filter((item) => item.domain === domain).map(({ id, label }) => (
+                  <option key={id} value={id}>{label}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="composer-field">
         <label htmlFor="intent-original">떠오른 말</label>
         <textarea
@@ -60,23 +101,6 @@ export default function InstructionComposer({
             setFeedback('')
           }}
         />
-      </div>
-
-      <div className="composer-field">
-        <label htmlFor="intent-family">어떤 표현을 비교할까요?</label>
-        <select
-          id="intent-family"
-          value={family.id}
-          onChange={(event) => onUpdate({ familyId: event.target.value, choiceLabel: null })}
-        >
-          {intentDomains.map((domain) => (
-            <optgroup key={domain} label={domain}>
-              {intentFamilies.filter((item) => item.domain === domain).map(({ id, label }) => (
-                <option key={id} value={id}>{label}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
       </div>
 
       <fieldset className="intent-choices">
@@ -124,6 +148,19 @@ export default function InstructionComposer({
           </div>
         </div>
       </details>
+
+      {nextFamily && (
+        <button
+          type="button"
+          className="secondary-action next-intent"
+          onClick={() => {
+            onUpdate({ familyId: nextFamily.id, choiceLabel: null })
+            familyRef.current?.focus()
+          }}
+        >
+          다음 묶음
+        </button>
+      )}
 
       {choice && (
         <div className="composer-fields">

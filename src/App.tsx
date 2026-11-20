@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import InstructionComposer from './InstructionComposer'
 import { devTerms } from './devTerms'
+import { emptyInstructionDraft, type InstructionDraft } from './instructionIntents'
 import { getKoreanCategory, koreanizeTermProse } from './koreanTermProse'
 import {
   deckDefinitions,
@@ -84,7 +86,7 @@ const studyModes = [
 
 const moreModes = [
   { id: 'routine', label: '오늘 루틴' },
-  { id: 'training', label: '질문 훈련' },
+  { id: 'training', label: '어휘·지시 연습' },
   { id: 'interpret', label: '보고서 해석' },
 ] as const
 
@@ -267,15 +269,12 @@ function App() {
       ) as Record<DeckId, string[]>,
   )
   const [trainingAnswer, setTrainingAnswer] = useState('')
+  const [trainingView, setTrainingView] = useState<'compose' | 'cards'>('compose')
   const [isTrainingSolutionVisible, setIsTrainingSolutionVisible] = useState(false)
   const [savedExpressions, setSavedExpressions] = useState<SavedExpression[]>(() =>
     loadSavedExpressions(),
   )
-  const [expressionDraft, setExpressionDraft] = useState({
-    original: '',
-    improvedKo: '',
-    improvedEn: '',
-  })
+  const [expressionDraft, setExpressionDraft] = useState<InstructionDraft>(emptyInstructionDraft)
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine,
   )
@@ -913,28 +912,13 @@ function App() {
     setTrainingAnswer((current) => appendMissingInstructionFields(current))
   }
 
-  const applyExpressionTemplate = () => {
-    setExpressionDraft((current) => ({
-      ...current,
-      improvedKo:
-        current.improvedKo ||
-        '목표, 입력 자료, 금지 경계, 출력 형식, 검증 기준을 분리해서 처리해줘.',
-    }))
-  }
-
-  const saveExpressionDraft = () => {
-    const original = expressionDraft.original.trim()
-    if (!original) {
-      return
-    }
+  const saveExpressionDraft = (original: string, improvedKo: string) => {
     const now = new Date().toISOString()
     const nextExpression: SavedExpression = {
       id: `expression-${Date.now()}`,
       original,
-      improvedKo:
-        expressionDraft.improvedKo.trim() ||
-        '목표, 입력 자료, 금지 경계, 출력 형식, 검증 기준을 분리해서 처리해줘.',
-      improvedEn: expressionDraft.improvedEn.trim(),
+      improvedKo,
+      improvedEn: '',
       createdAt: now,
       updatedAt: now,
     }
@@ -943,7 +927,7 @@ function App() {
       saveSavedExpressions(next)
       return next
     })
-    setExpressionDraft({ original: '', improvedKo: '', improvedEn: '' })
+    setExpressionDraft(emptyInstructionDraft)
   }
 
   const deleteSavedExpression = (expressionId: string) => {
@@ -993,7 +977,10 @@ function App() {
       progress: `${Math.min(trainingPracticeCounts[activeDeck] ?? 0, 2)} / 2`,
       done: deckTrainingDone,
       actionLabel: '질문 훈련',
-      action: () => selectMode('training'),
+      action: () => {
+        setTrainingView('cards')
+        selectMode('training')
+      },
     },
     {
       id: 'search',
@@ -1041,6 +1028,7 @@ function App() {
               aria-pressed={activeMode === mode.id}
               onClick={() => {
                 closeMorePanel()
+                if (mode.id === 'training') setTrainingView('compose')
                 selectMode(mode.id)
               }}
             >
@@ -1214,182 +1202,143 @@ function App() {
 
       {activeMode === 'training' && (
         <ModePanel
-          title={getTrainingTitle(activeDeck)}
-          subtitle={getTrainingSubtitle(activeDeck)}
+          title={trainingView === 'compose' ? '어휘·지시 연습' : getTrainingTitle(activeDeck)}
+          subtitle={trainingView === 'cards' ? getTrainingSubtitle(activeDeck) : undefined}
         >
-          <div className="training-summary">
-            <span>오늘 훈련 {trainingPracticeCounts[activeDeck] ?? 0}개</span>
-            <span>남은 새 표현 {trainingRemainingCount}개</span>
-            <span>{activeDeckDefinition.label}</span>
+          <div className="training-view-options" aria-label="지시 훈련 방식">
+            <button type="button" aria-pressed={trainingView === 'compose'} onClick={() => setTrainingView('compose')}>
+              내 말 정리
+            </button>
+            <button type="button" aria-pressed={trainingView === 'cards'} onClick={() => setTrainingView('cards')}>
+              카드 훈련
+            </button>
           </div>
-
-          {trainingTerm ? (
-            <section className={`training-card deck-${trainingTerm.deck}`}>
-              <div className="card-meta-row">
-                <div className="badge-group">
-                  <span className="category-badge">{trainingTerm.domainLabel}</span>
-                  <span className="category-badge">{getKoreanCategory(trainingTerm.category)}</span>
-                  <span className="category-badge">{getDifficultyLabel(trainingTerm.difficulty)}</span>
-                  <span className={`priority-badge priority-${trainingTerm.learningPriority}`}>
-                    {getPriorityLabel(trainingTerm.learningPriority)}
-                  </span>
-                  <ArchitectureStatusBadge term={trainingTerm} />
-                </div>
-                <StatusBadges
-                  isFavorite={favoriteIds.has(trainingTerm.id)}
-                  reviewStatus={reviewStatuses[trainingTerm.id]}
-                />
+          {trainingView === 'cards' ? (
+            <div>
+              <div className="training-summary">
+                <span>오늘 훈련 {trainingPracticeCounts[activeDeck] ?? 0}개</span>
+                <span>남은 새 표현 {trainingRemainingCount}개</span>
+                <span>{activeDeckDefinition.label}</span>
               </div>
 
-              <TermHeading term={trainingTerm} />
-              <p className="korean-meaning">{trainingTerm.koreanMeaning}</p>
-
-              <DetailBlock label="나쁜 지시문" tone="expression">
-                {trainingTerm.badExpression ?? '이거 좀 봐줘.'}
-              </DetailBlock>
-
-              <div className="training-input-heading">
-                <label className="search-label" htmlFor="training-answer">
-                  내가 바꿔본 지시문
-                </label>
-                <button type="button" onClick={addInstructionTemplate}>
-                  5요소 틀 넣기
-                </button>
-              </div>
-              <textarea
-                id="training-answer"
-                className="training-input"
-                rows={5}
-                value={trainingAnswer}
-                placeholder="목표, 입력 자료, 금지 경계, 출력 형식, 검증 기준을 넣어서 다시 써보세요."
-                onChange={(event) => setTrainingAnswer(event.target.value)}
-              />
-
-              <InstructionChecklist
-                items={instructionChecklist}
-                score={instructionChecklistScore}
-              />
-
-              <div className="training-actions">
-                <button type="button" className="primary-action" onClick={revealTrainingSolution}>
-                  모범 표현 보기
-                </button>
-                <button type="button" className="secondary-action" onClick={showNextTrainingTerm}>
-                  다음 훈련 카드
-                </button>
-              </div>
-
-              {isTrainingSolutionVisible && (
-                <div className="training-solution">
-                  <ExpressionBlock term={trainingTerm} />
-                  <PromptBlock term={trainingTerm} />
-                  <TermActions
-                    term={trainingTerm}
-                    isFavorite={favoriteIds.has(trainingTerm.id)}
-                    reviewStatus={reviewStatuses[trainingTerm.id]}
-                    reviewSchedule={reviewSchedules[trainingTerm.id]}
-                    onToggleFavorite={toggleFavorite}
-                    onUpdateReviewStatus={updateReviewStatus}
-                  />
-                </div>
-              )}
-            </section>
-          ) : (
-            <EmptyStateCard message="현재 학습 범위에 질문 훈련 카드가 없습니다. 전체 학습으로 바꾸거나 다른 학습장을 골라 주세요." />
-          )}
-
-          <section className="expression-vault" aria-label="내 표현 저장소">
-            <div className="mode-heading">
-              <h2>내 표현 저장소</h2>
-              <p>자주 쓰는 말을 명확한 한국어 지시문으로 바꿔 저장합니다.</p>
-            </div>
-
-            <label className="search-label" htmlFor="expression-original">
-              원래 내가 쓰던 말
-            </label>
-            <textarea
-              id="expression-original"
-              className="training-input"
-              rows={3}
-              value={expressionDraft.original}
-              placeholder="예: 이거 문제 없는지 봐줘."
-              onChange={(event) =>
-                setExpressionDraft((current) => ({ ...current, original: event.target.value }))
-              }
-            />
-
-            <label className="search-label" htmlFor="expression-ko">
-              좋은 한국어 지시문
-            </label>
-            <textarea
-              id="expression-ko"
-              className="training-input"
-              rows={3}
-              value={expressionDraft.improvedKo}
-              placeholder="예: 변경 파일, 위험 경계, 실제 버그, 검증 결과를 분리해서 판정해줘."
-              onChange={(event) =>
-                setExpressionDraft((current) => ({ ...current, improvedKo: event.target.value }))
-              }
-            />
-
-            <details className="optional-expression">
-              <summary>영어 표현 추가 (선택)</summary>
-              <label className="search-label" htmlFor="expression-en">영어 지시문</label>
-              <textarea
-                id="expression-en"
-                className="training-input"
-                rows={3}
-                value={expressionDraft.improvedEn}
-                onChange={(event) =>
-                  setExpressionDraft((current) => ({ ...current, improvedEn: event.target.value }))
-                }
-              />
-            </details>
-
-            <div className="training-actions">
-              <button type="button" className="secondary-action" onClick={applyExpressionTemplate}>
-                기본 틀 넣기
-              </button>
-              <button
-                type="button"
-                className="primary-action"
-                onClick={saveExpressionDraft}
-                disabled={!expressionDraft.original.trim()}
-              >
-                내 표현 저장
-              </button>
-            </div>
-
-            {savedExpressions.length > 0 && (
-              <div className="saved-expression-list">
-                {savedExpressions.map((expression) => (
-                  <article className="saved-expression-card" key={expression.id}>
-                    <div>
-                      <span>원래 표현</span>
-                      <p>{expression.original}</p>
+              {trainingTerm ? (
+                <section className={`training-card deck-${trainingTerm.deck}`}>
+                  <div className="card-meta-row">
+                    <div className="badge-group">
+                      <span className="category-badge">{trainingTerm.domainLabel}</span>
+                      <span className="category-badge">{getKoreanCategory(trainingTerm.category)}</span>
+                      <span className="category-badge">{getDifficultyLabel(trainingTerm.difficulty)}</span>
+                      <span className={`priority-badge priority-${trainingTerm.learningPriority}`}>
+                        {getPriorityLabel(trainingTerm.learningPriority)}
+                      </span>
+                      <ArchitectureStatusBadge term={trainingTerm} />
                     </div>
-                    <div>
-                      <span>좋은 한국어</span>
-                      <p>{expression.improvedKo}</p>
-                    </div>
-                    {expression.improvedEn && (
-                      <details className="optional-expression">
-                        <summary>저장한 영어 표현 보기</summary>
-                        <p lang="en">{expression.improvedEn}</p>
-                      </details>
-                    )}
-                    <button
-                      type="button"
-                      className="secondary-action"
-                      onClick={() => deleteSavedExpression(expression.id)}
-                    >
-                      삭제
+                    <StatusBadges
+                      isFavorite={favoriteIds.has(trainingTerm.id)}
+                      reviewStatus={reviewStatuses[trainingTerm.id]}
+                    />
+                  </div>
+
+                  <TermHeading term={trainingTerm} />
+                  <p className="korean-meaning">{trainingTerm.koreanMeaning}</p>
+
+                  <DetailBlock label="나쁜 지시문" tone="expression">
+                    {trainingTerm.badExpression ?? '이거 좀 봐줘.'}
+                  </DetailBlock>
+
+                  <div className="training-input-heading">
+                    <label className="search-label" htmlFor="training-answer">
+                      내가 바꿔본 지시문
+                    </label>
+                    <button type="button" onClick={addInstructionTemplate}>
+                      5요소 틀 넣기
                     </button>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+                  </div>
+                  <textarea
+                    id="training-answer"
+                    className="training-input"
+                    rows={5}
+                    value={trainingAnswer}
+                    placeholder="목표, 입력 자료, 금지 경계, 출력 형식, 검증 기준을 넣어서 다시 써보세요."
+                    onChange={(event) => setTrainingAnswer(event.target.value)}
+                  />
+
+                  <InstructionChecklist
+                    items={instructionChecklist}
+                    score={instructionChecklistScore}
+                  />
+
+                  <div className="training-actions">
+                    <button type="button" className="primary-action" onClick={revealTrainingSolution}>
+                      모범 표현 보기
+                    </button>
+                    <button type="button" className="secondary-action" onClick={showNextTrainingTerm}>
+                      다음 훈련 카드
+                    </button>
+                  </div>
+
+                  {isTrainingSolutionVisible && (
+                    <div className="training-solution">
+                      <ExpressionBlock term={trainingTerm} />
+                      <PromptBlock term={trainingTerm} />
+                      <TermActions
+                        term={trainingTerm}
+                        isFavorite={favoriteIds.has(trainingTerm.id)}
+                        reviewStatus={reviewStatuses[trainingTerm.id]}
+                        reviewSchedule={reviewSchedules[trainingTerm.id]}
+                        onToggleFavorite={toggleFavorite}
+                        onUpdateReviewStatus={updateReviewStatus}
+                      />
+                    </div>
+                  )}
+                </section>
+              ) : (
+                <EmptyStateCard message="현재 학습 범위에 질문 훈련 카드가 없습니다. 전체 학습으로 바꾸거나 다른 학습장을 골라 주세요." />
+              )}
+            </div>
+          ) : (
+            <>
+              <InstructionComposer
+                draft={expressionDraft}
+                onUpdate={(patch) => setExpressionDraft((current) => ({ ...current, ...patch }))}
+                onSave={saveExpressionDraft}
+                onOpenRelatedTerm={(name) => openRelatedTerm(name, 'ai-command')}
+                getTermLabel={(name) => findTermByName(name, 'ai-command')?.koreanName ?? name}
+              />
+              {savedExpressions.length > 0 && (
+                <details className="deep-details saved-expressions">
+                  <summary>저장한 내 표현 {savedExpressions.length}개</summary>
+                  <div className="saved-expression-list">
+                    {savedExpressions.map((expression) => (
+                      <article className="saved-expression-card" key={expression.id}>
+                        <div>
+                          <span>원래 표현</span>
+                          <p>{expression.original}</p>
+                        </div>
+                        <div>
+                          <span>한국어 지시문</span>
+                          <p className="saved-instruction">{expression.improvedKo}</p>
+                        </div>
+                        {expression.improvedEn && (
+                          <details className="optional-expression">
+                            <summary>저장한 영어 표현 보기</summary>
+                            <p lang="en">{expression.improvedEn}</p>
+                          </details>
+                        )}
+                        <button
+                          type="button"
+                          className="secondary-action"
+                          onClick={() => deleteSavedExpression(expression.id)}
+                        >
+                          삭제
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
+          )}
         </ModePanel>
       )}
 

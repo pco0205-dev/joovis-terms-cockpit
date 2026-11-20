@@ -1,9 +1,11 @@
-import type {
-  LearningScope,
-  RecallMode,
-  ReviewSchedule,
-  ReviewStatus,
-  SavedExpression,
+import {
+  deckDefinitions,
+  type DeckId,
+  type LearningScope,
+  type RecallMode,
+  type ReviewSchedule,
+  type ReviewStatus,
+  type SavedExpression,
 } from './types'
 
 const FAVORITES_KEY = 'joovis_terms_cockpit_favorites'
@@ -19,6 +21,16 @@ const ROUTINE_CHECKS_KEY = 'joovis_terms_cockpit_routine_checks'
 const SAVED_EXPRESSIONS_KEY = 'joovis_terms_cockpit_saved_expressions'
 const LEARNING_SCOPE_KEY = 'joovis_terms_cockpit_learning_scope'
 const RECALL_MODE_KEY = 'joovis_terms_cockpit_recall_mode'
+const ACTIVE_DECK_KEY = 'joovis_terms_cockpit_active_deck'
+
+export function loadActiveDeck(): DeckId {
+  const value = readJson<unknown>(ACTIVE_DECK_KEY, null)
+  return deckDefinitions.find((deck) => deck.id === value)?.id ?? 'ai-command'
+}
+
+export function saveActiveDeck(deck: DeckId) {
+  writeJson(ACTIVE_DECK_KEY, deck)
+}
 
 export function loadFavoriteIds() {
   return new Set(readJson<string[]>(FAVORITES_KEY, []))

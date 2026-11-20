@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joovis-terms-cockpit-v10'
+const CACHE_NAME = 'joovis-terms-cockpit-v11'
 const STATIC_SHELL = [
   '/manifest.webmanifest',
   '/favicon.svg',
@@ -41,7 +41,8 @@ async function precacheCurrentBuild() {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) {
+  const url = new URL(request.url)
+  if (request.method !== 'GET' || url.origin !== self.location.origin) {
     return
   }
 
@@ -50,8 +51,10 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // Hashed build assets are identical across Origin header variants.
+  const isBuildAsset = url.pathname.startsWith('/assets/')
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
+    caches.match(request, { cacheName: CACHE_NAME, ignoreVary: isBuildAsset }).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse
       }

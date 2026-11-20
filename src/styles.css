@@ -664,12 +664,50 @@ h3 {
   margin-top: 0.8rem;
 }
 
-.term-title p,
-.compact-pronunciation {
+.term-title h3 {
+  overflow-wrap: anywhere;
+}
+
+.term-title .term-pronunciation {
+  margin: 0.25rem 0 0;
+  color: var(--accent-strong);
+  font-size: 1.07rem;
+  font-weight: 850;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.pronunciation-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.term-title .term-original {
+  margin-top: 0.2rem;
   margin-bottom: 0;
   color: var(--muted);
-  font-size: 0.96rem;
-  font-weight: 760;
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.compact-main .term-title {
+  margin-top: 0;
+}
+
+.compact-main .term-pronunciation {
+  font-size: 0.98rem;
+}
+
+.optional-expression {
+  margin-top: 0.65rem;
+}
+
+.optional-expression summary {
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 750;
 }
 
 .korean-meaning {

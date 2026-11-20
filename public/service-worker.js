@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joovis-terms-cockpit-v9'
+const CACHE_NAME = 'joovis-terms-cockpit-v10'
 const STATIC_SHELL = [
   '/manifest.webmanifest',
   '/favicon.svg',

@@ -132,9 +132,9 @@ const internalSeeds: InternalSeed[] = [
   ),
   joovis(
     'Runtime Authority', '런타임 어쏘리티',
-    '현재 순간 특정 capability가 실제 영향 행동을 수행하도록 부여받은 권한',
+    '특정 기능이 지금 실제 상태에 영향을 주는 행동을 해도 된다는 권한',
     '도구를 소유한 것과 지금 사용 열쇠를 받은 것을 구분하는 현재 권한입니다.',
-    'static capability, admission, provider health와 policy를 결합해 짧은 수명의 actionable state를 만듭니다.',
+    '기능이 준비됐는지, 진입 심사를 통과했는지, 공급자 상태와 관리 정책이 허용하는지 대조해 잠시 유효한 실행 권한을 정합니다.',
     '행동 직전에 권한 조건을 다시 확인하고 결과 또는 환경 변화 시 권한을 철회합니다.',
     '설정 파일이나 과거 승인만 보고 권한이 있다고 판단하면 현재 경계와 어긋납니다.',
     ['Capability State', 'Admission', 'Capability Unit', 'Non-Actionable Shadow'], 'current', 'Authority Boundary',
@@ -188,11 +188,11 @@ const internalSeeds: InternalSeed[] = [
     ['Competence Selector', 'Agent Portfolio', 'Model Routing', 'Abstention'], 'target', 'Selection', 'working',
   ),
   foundry(
-    'Six-Plane', '식스 플레인', 'Foundry 책임을 여섯 개의 큰 소유 계층으로 나누는 상위 구조 모델',
+    'Six-Plane', '식스 플레인', '파운드리의 여러 책임을 여섯 계층으로 나누고 계층마다 담당 주체를 정하는 구조',
     '복잡한 공장을 역할이 다른 여섯 층으로 나눠 문제 위치를 찾는 지도입니다.',
-    '생성·평가·증거·거버넌스·통합 책임을 plane별 canonical owner와 contract family로 분리합니다.',
-    '새 기능 전에 어느 plane이 상태와 결정을 소유하는지 지정하고 cross-plane handoff를 계약으로 만듭니다.',
-    'plane을 폴더 이름으로만 쓰면 실제 상태 소유권과 권한 경계는 계속 섞입니다.',
+    '후보를 만드는 곳, 평가하는 곳, 근거를 보관하는 곳 등 책임별로 기준 상태를 관리할 주체와 지켜야 할 계약을 정합니다.',
+    '새 기능을 만들 때 상태를 기록할 주체와 최종 결정을 내릴 주체를 지정한 뒤, 계층 사이에서 넘길 자료와 검증 조건을 계약으로 정합니다.',
+    '계층 이름만 폴더에 붙여 두면 누가 상태를 바꿀 수 있고 누가 검증할지 여전히 알기 어렵습니다.',
     ['Three-Loop', 'Contract Family', 'Canonical Authority Owner', 'Membrane'], 'target', 'Plane Architecture',
   ),
   foundry(

@@ -4,6 +4,9 @@ import { futureTerms } from './futureTerms'
 import { investmentArchitectureTerms } from './investmentArchitectureTerms'
 import { investmentRobloxTerms } from './investmentRobloxTerms'
 import { internalArchitectureTerms } from './internalArchitectureTerms'
+import { joovisSharedTerms } from './joovisSharedTerms'
+import { koreanPronunciations, koreanTermNames } from './koreanTermNames'
+import { koreanizeTermDescriptions } from './koreanTermProse'
 import { professionalBridgeTerms } from './professionalBridgeTerms'
 import { getTermCuration } from './termCuration'
 import { buildFallbackDepth } from './termDepth'
@@ -2151,6 +2154,7 @@ const addedTerms = [
   ...domainStructureTerms,
   ...investmentArchitectureTerms,
   ...internalArchitectureTerms,
+  ...joovisSharedTerms,
   ...professionalBridgeTerms,
 ] satisfies RawDevTerm[]
 
@@ -2195,7 +2199,7 @@ function makeResearchPromptTerm(seed: ResearchPromptSeed): RawDevTerm {
 
 const buildResult = buildDataset(legacyTerms, addedTerms)
 
-export const devTerms = buildResult.terms
+export const devTerms = buildResult.terms.map(koreanizeTermDescriptions)
 export const datasetStats = buildResult.stats
 
 function makeAiTerm(term: Omit<RawDevTerm, 'id' | 'deck' | 'domainLabel' | 'joovisUsage' | 'checkQuestion' | 'codexPromptExample' | 'gptPromptExample'>): RawDevTerm {
@@ -2355,21 +2359,21 @@ function makeBilingualPromptTerm(
     goodExpression,
     gptPromptExample: goodExpression.split('\nEN: ')[1] ?? goodExpression,
     codexPromptExample: goodExpression.split('\nEN: ')[0],
-    joovisUsage: `${term}은 한국어로 이해하고 영어 지시문으로도 바로 옮겨 쓸 수 있게 만든 AI 지휘 표현입니다.`,
+    joovisUsage: '요청에서 확인할 자료, 작업 범위, 끝났다고 판단할 기준을 맞출 때 쓰는 표현입니다.',
     checkQuestion: `${term}을 쓸 때 어떤 기준, 경계, 출력 형식을 함께 말해야 하나요?`,
-    mentalModel: `${term}은 AI에게 건네는 작업 주문서의 핵심 문장입니다. 한국어 문장은 내가 의도를 이해하는 쪽이고, 영어 문장은 실제 명령으로 복사해 쓰는 쪽입니다.`,
+    mentalModel: '작업 요청을 받은 사람이 무엇을 보고, 어디까지 하고, 어떤 결과를 내야 할지 알 수 있도록 주문서의 빈칸을 채우는 문장입니다.',
     whyItMatters:
-      '한국어로만 대충 말하면 의도는 편하지만 출력 기준이 흐려질 수 있고, 영어 표현을 같이 익히면 Codex/GPT에게 더 짧고 정확하게 요구할 수 있습니다.',
+      '목표와 결과 형식을 명확하게 적어 두면 인공지능이 빈칸을 추측하는 일이 줄고, 답을 받은 뒤에도 확인할 기준이 남습니다.',
     withoutIt:
       '이 표현을 모르면 "봐줘", "고쳐줘", "알아서 해줘"처럼 넓은 요청을 반복하게 됩니다. 그러면 AI가 경계, 검증, 출력 형식을 추측하게 됩니다.',
     realWorkflow:
-      '먼저 한국어 좋은 표현으로 요구사항을 정리하고, 필요하면 EN 문장을 복사해 프롬프트 첫 줄이나 마지막 검증 지시로 붙입니다.',
+      '한국어 예시에서 내 작업에 맞는 기준과 자료를 채웁니다. 실행 전에는 작업 경계를, 답을 받은 뒤에는 결과와 근거가 요청에 맞는지 확인합니다.',
     mechanism:
       '좋은 AI 지시는 목표, 금지 경계, 판단 기준, 출력 형식을 동시에 잠급니다. 이 표현들은 그 네 가지를 짧은 문장으로 묶는 역할을 합니다.',
     usagePattern:
       'Codex에게 작업을 맡기기 전, 또는 리뷰 결과를 요구할 때 문장 앞에 붙이면 좋습니다. 특히 파일 수정 전 분석, 경계 확인, 검증 보고에 효과적입니다.',
     commonPitfall:
-      '영어 표현을 외우는 것보다 언제 쓰는지가 중요합니다. 분석만 원할 때, 수정까지 원할 때, 검증 보고가 필요할 때를 분리해야 합니다.',
+      '분석 요청, 수정 요청, 검증 보고는 끝나는 지점이 다릅니다. 원하는 작업을 먼저 고르고 그에 맞는 결과를 요구하세요.',
     expertNote:
       `${term}은 실제 명령 품질을 올리는 표현이므로 ${relatedTerms.slice(0, 3).join(', ')}와 함께 연습하면 좋습니다.`,
     relatedTerms,
@@ -2440,8 +2444,16 @@ function enrichTerm(term: RawDevTerm): DevTerm {
   const domainLabel = term.domainLabel ?? getDomainLabel(deck)
   const difficulty = term.difficulty ?? inferDifficulty(term)
   const curation = getTermCuration({ ...term, deck, difficulty })
+  const pronunciation = koreanPronunciations[term.term] ?? term.pronunciation
+  const koreanName =
+    term.koreanName ??
+    koreanTermNames[`${deck}:${term.term}`] ??
+    koreanTermNames[term.term] ??
+    pronunciation
   const base: DevTerm = {
     ...term,
+    pronunciation,
+    koreanName,
     deck,
     domainLabel,
     difficulty,

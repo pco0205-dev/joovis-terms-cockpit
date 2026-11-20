@@ -1518,15 +1518,18 @@ const robloxSeeds: LearningSeed[] = [
 
 function makeLearningTerm(deck: Extract<DeckId, 'investment-analysis' | 'roblox'>, seed: LearningSeed): RawDevTerm {
   const isInvestment = deck === 'investment-analysis'
-  const domainLabel = isInvestment ? '투자 구조' : 'Roblox'
+  const isRobloxDevelopment = !isInvestment && seed.category === '제작 기술'
+  const domainLabel = isInvestment ? '투자 구조' : '로블록스'
   const source = isInvestment
     ? investmentSource
-    : seed.category === '제작 기술'
+    : isRobloxDevelopment
       ? robloxCreatorSource
       : robloxBusinessSource
   const goodExpression = isInvestment
     ? `${seed.term}을 단독 매수·매도 신호로 쓰지 말고, 정의, 근거, 반대 근거, 핵심 가정, 실패 조건, 확인할 공시를 분리해서 판단해줘.`
-    : `${seed.term}의 공식 정의, 계산 구조나 작동 원리, 함께 움직이는 지표, 반대 신호, 확인할 공시를 분리해서 설명해줘.`
+    : isRobloxDevelopment
+      ? `${seed.term}의 역할을 설명해줘. 어디서 실행되고 어떤 입력을 받아 상태를 어떻게 바꾸는지, 실패하면 무엇을 확인할지 나눠서 적어줘.`
+      : `${seed.term}의 공식 정의, 계산 구조나 작동 원리, 함께 움직이는 지표, 반대 신호, 확인할 공시를 분리해서 설명해줘.`
 
   return {
     id: `${deck}-${slugify(seed.term)}`,
@@ -1551,7 +1554,9 @@ function makeLearningTerm(deck: Extract<DeckId, 'investment-analysis' | 'roblox'
     checkQuestion: `${seed.term}은 무엇을 입력으로 받아 어떤 결과를 만들며, 어떤 반대 증거가 이 해석을 깨뜨릴까요?`,
     badExpression: isInvestment
       ? `${seed.term}이 좋아 보이는데 지금 사도 될까?`
-      : `${seed.term} 숫자가 좋아 보이니 Roblox는 무조건 좋아진 거지?`,
+      : isRobloxDevelopment
+        ? `${seed.term} 쓰면 그냥 알아서 되는 거지?`
+        : `${seed.term} 숫자가 좋아 보이니 로블록스는 무조건 좋아진 거지?`,
     goodExpression,
     gptPromptExample: goodExpression,
     codexPromptExample: goodExpression,

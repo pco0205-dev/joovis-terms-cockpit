@@ -2,7 +2,7 @@ import type { DevTerm } from './types'
 
 type DepthInput = Pick<
   DevTerm,
-  | 'term'
+  | 'koreanName'
   | 'deck'
   | 'category'
   | 'koreanMeaning'
@@ -344,15 +344,15 @@ export function buildFallbackDepth(term: DepthInput) {
   const related = term.relatedTerms?.slice(0, 4).join(', ')
 
   return {
-    mentalModel: `‘${term.term}’은 ${term.koreanMeaning}을 뜻합니다. ${profile.spatialModel}`,
+    mentalModel: `‘${term.koreanName}’의 뜻은 “${term.koreanMeaning}”입니다. ${profile.spatialModel}`,
     whyItMatters: `${term.simpleMeaning} ${profile.why}`,
-    withoutIt: `${term.term}을 구분하지 않으면 ${profile.failure}`,
-    realWorkflow: `${profile.workflow} 이때 ${term.term}이 실제로 어느 입력과 상태를 바꾸는지 확인합니다.`,
-    mechanism: `${profile.mechanism} 이 흐름에서 ${term.term}은 “${term.koreanMeaning}”을 담당합니다.`,
+    withoutIt: `‘${term.koreanName}’의 역할을 구분하지 않으면 ${profile.failure}`,
+    realWorkflow: `${profile.workflow} 이때 ‘${term.koreanName}’의 역할을 입력과 상태 변화에서 확인합니다.`,
+    mechanism: `${profile.mechanism} 이 흐름에서 ‘${term.koreanName}’의 역할을 살펴보세요.`,
     usagePattern: `${profile.usage} 확인할 질문은 “${term.checkQuestion}”입니다.`,
     commonPitfall: profile.pitfall,
     expertNote: related
-      ? `${term.term}을 ${related}와 연결해 입력 → 처리 → 상태 변화 → 실패 → 검증 순서로 설명해보세요.`
-      : `${term.term}을 정의만 말하지 말고 입력 → 처리 → 상태 변화 → 실패 → 검증 순서로 설명해보세요.`,
+      ? `‘${term.koreanName}’을 ${related}와 연결해 입력 → 처리 → 상태 변화 → 실패 → 검증 순서로 설명해보세요.`
+      : `‘${term.koreanName}’이 어디에 쓰이는지 입력 → 처리 → 상태 변화 → 실패 → 검증 순서로 설명해보세요.`,
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { datasetStats, devTerms } from './devTerms'
+import { getKoreanCategory, koreanizeTermProse } from './koreanTermProse'
 import {
   deckDefinitions,
   type ArchitectureStatus,
@@ -84,8 +85,8 @@ const modes: Array<{ id: Mode; label: string; description: string }> = [
 
 const guideItems = [
   {
-    title: 'Deck 선택',
-    body: 'AI 지휘·Foundry Lab·개발·JOOVIS·투자 구조·Roblox·분쟁통합을 섞지 않고 목적별 학습장으로 나눠 씁니다.',
+    title: '학습장 선택',
+    body: 'AI 지휘, 파운드리, 개발, 주비스, 투자 구조, 로블록스, 분쟁통합에서 공부할 분야를 고릅니다.',
   },
   {
     title: '학습 범위',
@@ -95,7 +96,7 @@ const guideItems = [
   { title: '오늘', body: '회상 방향을 고르고 답을 떠올린 뒤 정답을 확인합니다.' },
   { title: '랜덤', body: '한 바퀴 동안 중복 없이 새 용어를 능동 회상합니다.' },
   { title: '다시 보기', body: '모르는 용어만 다시 봅니다.' },
-  { title: '질문 훈련', body: '목표·입력·경계·출력·검증을 채우고 덱에 맞는 한국어/영어 모범 표현과 비교합니다.' },
+  { title: '질문 훈련', body: '목표·입력·경계·출력·검증을 적고 한국어 모범 표현과 비교합니다.' },
   { title: '전체 검색', body: 'Codex 보고서에서 모르는 단어를 찾습니다.' },
   { title: '보고서', body: '긴 문장을 붙여 넣고 앱의 용어와 표현을 찾아봅니다.' },
 ]
@@ -115,8 +116,8 @@ const priorityFilters: Array<{ id: PriorityFilter; label: string }> = [
 ]
 
 const recallModeOptions: Array<{ id: RecallMode; label: string; description: string }> = [
-  { id: 'english-korean', label: '영→한', description: '영어를 보고 뜻 떠올리기' },
-  { id: 'korean-english', label: '한→영', description: '한국어 뜻에서 영어 찾기' },
+  { id: 'english-korean', label: '발음→뜻', description: '한글 발음을 읽고 뜻 떠올리기' },
+  { id: 'korean-english', label: '뜻→원어', description: '한국어 뜻에서 원어 떠올리기' },
   { id: 'mechanism', label: '원리', description: '왜 필요한지와 흐름 설명하기' },
 ]
 
@@ -534,13 +535,26 @@ function App() {
   )
   const searchTerms = useMemo(() => {
     const normalizedQuery = normalizeText(query)
+    const nameQuery = normalizeTermKey(normalizedQuery)
     const category = availableCategories.includes(selectedCategory) ? selectedCategory : 'All'
+    const matchingTerms: Array<{ term: DevTerm; rank: number }> = []
 
-    return searchSourceTerms.filter((term) => {
-      const matchesCategory = category === 'All' || term.category === category
+    for (const term of searchSourceTerms) {
+      if (category !== 'All' && term.category !== category) continue
+      if (!normalizedQuery) {
+        matchingTerms.push({ term, rank: 0 })
+        continue
+      }
+
+      const names = getTermNameKeys(term)
+      if (nameQuery && names.some((name) => name.includes(nameQuery))) {
+        matchingTerms.push({ term, rank: names.includes(nameQuery) ? 0 : 1 })
+        continue
+      }
       const searchableText = normalizeText(
         [
           term.term,
+          term.koreanName,
           term.pronunciation,
           term.koreanMeaning,
           term.simpleMeaning,
@@ -567,13 +581,15 @@ function App() {
           term.relatedTerms?.join(' '),
           termMemos[term.id],
           term.domainLabel,
+          getKoreanCategory(term.category),
         ]
           .filter(Boolean)
           .join(' '),
       )
 
-      return matchesCategory && searchableText.includes(normalizedQuery)
-    })
+      if (searchableText.includes(normalizedQuery)) matchingTerms.push({ term, rank: 2 })
+    }
+    return matchingTerms.sort((first, second) => first.rank - second.rank).map(({ term }) => term)
   }, [availableCategories, query, searchSourceTerms, selectedCategory, termMemos])
   const visibleSearchTerms = searchTerms.slice(0, visibleSearchCount)
   const reportMatches = useMemo(
@@ -652,6 +668,9 @@ function App() {
     setActiveMode('search')
     setSearchAllDecks(false)
     setSelectedCategory('All')
+    setDifficultyFilter('all')
+    setPriorityFilter('all')
+    setVisibleSearchCount(30)
     setQuery(matchedTerm.term)
     setExpandedTermId(matchedTerm.id)
   }
@@ -904,9 +923,6 @@ function App() {
       improvedKo:
         current.improvedKo ||
         '목표, 입력 자료, 금지 경계, 출력 형식, 검증 기준을 분리해서 처리해줘.',
-      improvedEn:
-        current.improvedEn ||
-        'Separate the goal, input material, forbidden boundaries, output format, and validation criteria before answering.',
     }))
   }
 
@@ -922,9 +938,7 @@ function App() {
       improvedKo:
         expressionDraft.improvedKo.trim() ||
         '목표, 입력 자료, 금지 경계, 출력 형식, 검증 기준을 분리해서 처리해줘.',
-      improvedEn:
-        expressionDraft.improvedEn.trim() ||
-        'Separate the goal, input material, forbidden boundaries, output format, and validation criteria before answering.',
+      improvedEn: expressionDraft.improvedEn.trim(),
       createdAt: now,
       updatedAt: now,
     }
@@ -1022,7 +1036,7 @@ function App() {
         </div>
       </header>
 
-      <nav className="deck-nav" aria-label="학습 Deck 선택">
+      <nav className="deck-nav" aria-label="학습장 선택">
         {deckDefinitions.map((deck) => (
           <button
             key={deck.id}
@@ -1092,7 +1106,7 @@ function App() {
       </nav>
 
       {(activeMode === 'routine' || activeMode === 'review' || activeMode === 'search') && (
-        <section className="stats-row" aria-label="선택 Deck 학습 현황">
+        <section className="stats-row" aria-label="선택한 학습장 현황">
           <span>학습 {activeDeckTerms.length}</span>
           <span>중요 {deckFavoriteCount}</span>
           <span>알고 있음 {deckKnownCount}</span>
@@ -1136,7 +1150,7 @@ function App() {
       )}
 
       {activeMode === 'today' && (
-        <ModePanel title="오늘의 용어" subtitle="선택한 Deck 안에서 날짜 기준으로 하루 1개 고정됩니다.">
+        <ModePanel title="오늘의 용어" subtitle="선택한 학습장에서 날짜별로 한 용어를 보여줍니다.">
           {todayTerm ? (
             <StudyCard
               key={todayTerm.id}
@@ -1159,7 +1173,7 @@ function App() {
       )}
 
       {activeMode === 'random' && (
-        <ModePanel title="랜덤 연습" subtitle="버튼을 누르면 이 Deck 안에서 새 용어로 바뀝니다.">
+        <ModePanel title="랜덤 연습" subtitle="다음 버튼을 누르면 이 학습장의 새 용어를 보여줍니다.">
           <div className="random-controls">
             <span>
               오늘 랜덤 연습: {randomPracticeCounts[activeDeck]}개 · 남은 새 카드:{' '}
@@ -1279,7 +1293,7 @@ function App() {
               <div className="card-meta-row">
                 <div className="badge-group">
                   <span className="category-badge">{trainingTerm.domainLabel}</span>
-                  <span className="category-badge">{trainingTerm.category}</span>
+                  <span className="category-badge">{getKoreanCategory(trainingTerm.category)}</span>
                   <span className="category-badge">{getDifficultyLabel(trainingTerm.difficulty)}</span>
                   <span className={`priority-badge priority-${trainingTerm.learningPriority}`}>
                     {getPriorityLabel(trainingTerm.learningPriority)}
@@ -1292,10 +1306,8 @@ function App() {
                 />
               </div>
 
-              <div className="term-title">
-                <h3>{trainingTerm.term}</h3>
-                <p>{trainingTerm.koreanMeaning}</p>
-              </div>
+              <TermHeading term={trainingTerm} />
+              <p className="korean-meaning">{trainingTerm.koreanMeaning}</p>
 
               <DetailBlock label="나쁜 지시문" tone="expression">
                 {trainingTerm.badExpression ?? '이거 좀 봐줘.'}
@@ -1348,13 +1360,13 @@ function App() {
               )}
             </section>
           ) : (
-            <EmptyStateCard message="현재 Deck/학습 범위에는 질문 훈련 카드가 없습니다. 전체 학습으로 바꾸거나 다른 Deck을 선택해 주세요." />
+            <EmptyStateCard message="현재 학습 범위에 질문 훈련 카드가 없습니다. 전체 학습으로 바꾸거나 다른 학습장을 골라 주세요." />
           )}
 
           <section className="expression-vault" aria-label="내 표현 저장소">
             <div className="mode-heading">
               <h2>내 표현 저장소</h2>
-              <p>내가 자주 쓰는 애매한 말을 더 강한 한국어/영어 지시문으로 바꿔 저장합니다.</p>
+              <p>자주 쓰는 말을 명확한 한국어 지시문으로 바꿔 저장합니다.</p>
             </div>
 
             <label className="search-label" htmlFor="expression-original">
@@ -1385,19 +1397,19 @@ function App() {
               }
             />
 
-            <label className="search-label" htmlFor="expression-en">
-              English instruction
-            </label>
-            <textarea
-              id="expression-en"
-              className="training-input"
-              rows={3}
-              value={expressionDraft.improvedEn}
-              placeholder="Example: Separate changed files, boundary risks, actionable bugs, and validation results."
-              onChange={(event) =>
-                setExpressionDraft((current) => ({ ...current, improvedEn: event.target.value }))
-              }
-            />
+            <details className="optional-expression">
+              <summary>영어 표현 추가 (선택)</summary>
+              <label className="search-label" htmlFor="expression-en">영어 지시문</label>
+              <textarea
+                id="expression-en"
+                className="training-input"
+                rows={3}
+                value={expressionDraft.improvedEn}
+                onChange={(event) =>
+                  setExpressionDraft((current) => ({ ...current, improvedEn: event.target.value }))
+                }
+              />
+            </details>
 
             <div className="training-actions">
               <button type="button" className="secondary-action" onClick={applyExpressionTemplate}>
@@ -1425,10 +1437,12 @@ function App() {
                       <span>좋은 한국어</span>
                       <p>{expression.improvedKo}</p>
                     </div>
-                    <div>
-                      <span>English</span>
-                      <p>{expression.improvedEn}</p>
-                    </div>
+                    {expression.improvedEn && (
+                      <details className="optional-expression">
+                        <summary>저장한 영어 표현 보기</summary>
+                        <p lang="en">{expression.improvedEn}</p>
+                      </details>
+                    )}
                     <button
                       type="button"
                       className="secondary-action"
@@ -1449,20 +1463,20 @@ function App() {
           title="전체 검색"
           subtitle={
             searchAllDecks
-              ? '모든 Deck에서 용어를 찾습니다.'
-            : '선택한 Deck의 전체 사전에서 용어를 찾습니다.'
+              ? '모든 학습장에서 용어를 찾습니다.'
+              : '선택한 학습장의 전체 사전에서 용어를 찾습니다.'
           }
         >
           <section className="search-panel" aria-label="용어 검색">
             <label className="search-label" htmlFor="term-search">
-              용어, 뜻, 사용 예, 표현 예시, 프롬프트 예시로 검색
+              한국어 이름, 한글 발음, 원어 또는 뜻으로 검색
             </label>
             <input
               id="term-search"
               className="search-input"
               type="search"
               value={query}
-              placeholder="예: 원본대조, schema, prompt..."
+              placeholder="예: 정본 기록, 리엔트리, schema"
               onChange={(event) => {
                 setQuery(event.target.value)
                 setVisibleSearchCount(30)
@@ -1479,7 +1493,7 @@ function App() {
                   setVisibleSearchCount(30)
                 }}
               />
-              전체 Deck 검색
+              모든 학습장 검색
             </label>
 
             <div className="filter-label">학습 우선순위</div>
@@ -1532,7 +1546,7 @@ function App() {
                     setVisibleSearchCount(30)
                   }}
                 >
-                  {category === 'All' ? '전체 분야' : category}
+                  {category === 'All' ? '전체 분야' : getKoreanCategory(category)}
                 </button>
               ))}
             </div>
@@ -1590,7 +1604,7 @@ function App() {
               className="report-input"
               value={reportText}
               rows={8}
-              placeholder="예: Review the diff against acceptance criteria, identify boundary risks, and propose a rollback plan..."
+              placeholder="예: 완료 기준과 변경분을 대조하고, 위험한 변경과 되돌리는 방법을 찾아줘."
               onChange={(event) => setReportText(event.target.value)}
             />
             <label className="toggle-row">
@@ -1599,18 +1613,18 @@ function App() {
                 checked={searchAllDecks}
                 onChange={(event) => setSearchAllDecks(event.target.checked)}
               />
-              전체 Deck에서 해석
+              모든 학습장에서 해석
             </label>
           </section>
 
           <div className="interpret-summary">
-            <span>매칭 용어 {reportMatches.length}개</span>
-            <span>{searchAllDecks ? '전체 Deck' : activeDeckDefinition.label}</span>
+            <span>찾은 용어 {reportMatches.length}개</span>
+            <span>{searchAllDecks ? '모든 학습장' : activeDeckDefinition.label}</span>
           </div>
 
           {reportText.trim() && reportMatches.length === 0 && (
             <p className="empty-state-card">
-              아직 매칭되는 용어가 없습니다. 더 긴 문장을 붙여넣거나 전체 Deck 검색을 켜보세요.
+              일치하는 용어가 없습니다. 다른 문장을 붙여넣거나 모든 학습장에서 찾아보세요.
             </p>
           )}
 
@@ -1740,6 +1754,35 @@ type StudyCardProps = TermActionProps & {
   onChangeRecallMode: (mode: RecallMode) => void
 }
 
+function TermHeading({
+  term,
+  pronunciationFirst = false,
+}: {
+  term: DevTerm
+  pronunciationFirst?: boolean
+}) {
+  const heading = pronunciationFirst ? term.pronunciation : term.koreanName
+  const hasOriginal = term.term !== heading
+  const pronunciationIsHeading = heading === term.pronunciation && hasOriginal
+
+  return (
+    <div className="term-title">
+      {pronunciationIsHeading && <span className="pronunciation-label">한글 발음</span>}
+      <h3>{heading}</h3>
+      {heading !== term.pronunciation && term.pronunciation !== term.term && (
+        <p className="term-pronunciation">
+          <span className="pronunciation-label">한글 발음</span> {term.pronunciation}
+        </p>
+      )}
+      {hasOriginal && (
+        <p className="term-original">
+          원어 <span lang={/[가-힣]/u.test(term.term) ? undefined : 'en'}>{term.term}</span>
+        </p>
+      )}
+    </div>
+  )
+}
+
 function StudyCard({
   term,
   recallMode,
@@ -1755,6 +1798,7 @@ function StudyCard({
 }: StudyCardProps) {
   const [isAnswerVisible, setIsAnswerVisible] = useState(false)
   const activeRecallOption = recallModeOptions.find((option) => option.id === recallMode)!
+  const usage = getUsageText(term)
 
   const selectRecallMode = (mode: RecallMode) => {
     onChangeRecallMode(mode)
@@ -1766,7 +1810,7 @@ function StudyCard({
       <div className="card-meta-row">
         <div className="badge-group">
           <span className="category-badge">{term.domainLabel}</span>
-          <span className="category-badge">{term.category}</span>
+          <span className="category-badge">{getKoreanCategory(term.category)}</span>
           <span className="category-badge">{getDifficultyLabel(term.difficulty)}</span>
           <span className={`priority-badge priority-${term.learningPriority}`}>
             {getPriorityLabel(term.learningPriority)}
@@ -1808,10 +1852,7 @@ function StudyCard({
             </button>
           </div>
 
-          <div className="term-title">
-            <h3>{term.term}</h3>
-            <p>{term.pronunciation}</p>
-          </div>
+          <TermHeading term={term} />
 
           <p className="korean-meaning">{term.koreanMeaning}</p>
           <p className="simple-meaning">{term.simpleMeaning}</p>
@@ -1827,9 +1868,11 @@ function StudyCard({
             sticky
           />
 
-          <DetailBlock label={getUsageLabel(term)} tone="usage">
-            {getUsageText(term)}
-          </DetailBlock>
+          {usage && usage !== term.simpleMeaning && (
+            <DetailBlock label={getUsageLabel(term)} tone="usage">
+              {usage}
+            </DetailBlock>
+          )}
           <details className="deep-details">
             <summary>심화 이해 · 작동 원리와 현장 흐름</summary>
             <p className="selection-reason">{term.selectionReason}</p>
@@ -1866,20 +1909,17 @@ function RecallFront({
       <p className="eyebrow">먼저 머릿속으로 답해보세요</p>
       {isKoreanToEnglish ? (
         <>
-          <h3>이 뜻에 해당하는 영어 용어는?</h3>
+          <h3>이 뜻에 해당하는 원어와 발음은?</h3>
           <p className="recall-korean-clue">{term.koreanMeaning}</p>
         </>
       ) : (
-        <div className="term-title">
-          <h3>{term.term}</h3>
-          <p>{term.pronunciation}</p>
-        </div>
+        <TermHeading term={term} pronunciationFirst={!isMechanismRecall} />
       )}
 
       {isMechanismRecall && <p className="recall-korean-clue">{term.koreanMeaning}</p>}
       <p className="recall-question">
         {isKoreanToEnglish
-          ? '영어 용어와 발음을 소리 내어 말해보세요.'
+          ? '원어와 발음을 소리 내어 말해보세요.'
           : isMechanismRecall
             ? '왜 필요한지, 입력이 어떤 과정을 거쳐 무엇으로 검증되는지 설명해보세요.'
             : '한국어 뜻과 실제로 쓰는 상황을 한 문장씩 떠올려보세요.'}
@@ -1945,20 +1985,21 @@ function CompactTermCard({
   onOpenRelatedTerm,
   matchReason,
 }: CompactTermCardProps) {
+  const usage = getUsageText(term)
+
   return (
     <article className={`compact-card ${isExpanded ? 'expanded' : ''} deck-${term.deck}`}>
       <div className="compact-main">
         <div>
           <div className="badge-group">
             <span className="category-badge">{term.domainLabel}</span>
-            <span className="category-badge">{term.category}</span>
+            <span className="category-badge">{getKoreanCategory(term.category)}</span>
             <span className={`priority-badge priority-${term.learningPriority}`}>
               {getPriorityLabel(term.learningPriority)}
             </span>
             <ArchitectureStatusBadge term={term} />
           </div>
-          <h3>{term.term}</h3>
-          <p className="compact-pronunciation">{term.pronunciation}</p>
+          <TermHeading term={term} />
           <p className="compact-meaning">{term.koreanMeaning}</p>
           {matchReason && <p className="match-reason">{matchReason}</p>}
         </div>
@@ -1973,9 +2014,11 @@ function CompactTermCard({
         <div className="compact-details">
           <p className="simple-meaning">{term.simpleMeaning}</p>
           <ArchitectureStatusBlock term={term} />
-          <DetailBlock label={getUsageLabel(term)} tone="usage">
-            {getUsageText(term)}
-          </DetailBlock>
+          {usage && usage !== term.simpleMeaning && (
+            <DetailBlock label={getUsageLabel(term)} tone="usage">
+              {usage}
+            </DetailBlock>
+          )}
           <details className="deep-details">
             <summary>심화 이해 · 작동 원리와 현장 흐름</summary>
             <p className="selection-reason">{term.selectionReason}</p>
@@ -2070,7 +2113,7 @@ function ConceptMapBlock({ term }: { term: DevTerm }) {
   }
 
   return (
-    <section className="concept-map-block" aria-label={`${term.term} 개념 지도`}>
+    <section className="concept-map-block" aria-label={`${term.koreanName} 개념 지도`}>
       {term.mentalModel && (
         <DetailBlock label="머릿속 그림" tone="mental">
           {term.mentalModel}
@@ -2103,7 +2146,7 @@ function DeepDiveBlock({
   onOpenRelatedTerm: (relatedTerm: string, sourceDeck: DeckId) => void
 }) {
   return (
-    <section className="deep-dive-block" aria-label={`${term.term} 심화 설명`}>
+    <section className="deep-dive-block" aria-label={`${term.koreanName} 심화 설명`}>
       {term.mechanism && (
         <DetailBlock label="작동 원리" tone="mechanism">
           {term.mechanism}
@@ -2130,7 +2173,7 @@ function DeepDiveBlock({
         </DetailBlock>
       )}
       {term.relatedTerms && term.relatedTerms.length > 0 && (
-        <div className="related-terms" aria-label={`${term.term} 관련 용어`}>
+        <div className="related-terms" aria-label={`${term.koreanName} 관련 용어`}>
           <span>같이 볼 용어</span>
           <div>
             {term.relatedTerms.map((relatedTerm) => (
@@ -2139,7 +2182,7 @@ function DeepDiveBlock({
                 key={relatedTerm}
                 onClick={() => onOpenRelatedTerm(relatedTerm, term.deck)}
               >
-                {relatedTerm}
+                {findTermByName(relatedTerm, term.deck)?.koreanName ?? relatedTerm}
               </button>
             ))}
           </div>
@@ -2163,7 +2206,7 @@ function ExpressionBlock({ term }: { term: DevTerm }) {
       )}
       {term.goodExpression && (
         <DetailBlock label="좋은 표현" tone="expression">
-          {term.goodExpression.split('\nEN:')[0].trim()}
+          {term.goodExpression}
         </DetailBlock>
       )}
     </div>
@@ -2171,19 +2214,18 @@ function ExpressionBlock({ term }: { term: DevTerm }) {
 }
 
 function PromptBlock({ term }: { term: DevTerm }) {
-  const prompt = term.gptPromptExample ?? term.codexPromptExample
+  const example = [term.codexPromptExample, term.gptPromptExample, term.goodExpression].find(
+    (value): value is string => value !== undefined && /[가-힣]/u.test(value),
+  )
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
-
-  if (!prompt) {
-    return null
-  }
-
+  if (!example) return null
+  const text = koreanizeTermProse(example.split('\nEN:', 1)[0])
   const copyPrompt = async () => {
     try {
       if (!navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
       }
-      await navigator.clipboard.writeText(prompt)
+      await navigator.clipboard.writeText(text)
       setCopyState('copied')
     } catch {
       setCopyState('failed')
@@ -2195,15 +2237,7 @@ function PromptBlock({ term }: { term: DevTerm }) {
   return (
     <div className="prompt-block">
       <div className="prompt-header">
-        <span>
-          {term.deck === 'ai-command'
-            ? 'English command'
-            : term.deck === 'dispute-integration'
-              ? 'GPT 프롬프트 예시'
-              : term.deck === 'investment-analysis' || term.deck === 'roblox'
-                ? '분석 질문 예시'
-                : '프롬프트 예시'}
-        </span>
+        <span>지시문 예시</span>
         <button type="button" onClick={copyPrompt}>
           {copyState === 'copied'
             ? '복사됨'
@@ -2212,7 +2246,7 @@ function PromptBlock({ term }: { term: DevTerm }) {
               : '프롬프트 복사'}
         </button>
       </div>
-      <p>{prompt}</p>
+      <p>{text}</p>
     </div>
   )
 }
@@ -2281,7 +2315,7 @@ function TermActions({
           {reviewSchedule.intervalDays}일
         </p>
       )}
-      <div className="term-actions" aria-label={`${term.term} 학습 동작`}>
+      <div className="term-actions" aria-label={`${term.koreanName} 학습 동작`}>
         <button
           type="button"
           className={reviewStatus === 'known' ? 'active known' : ''}
@@ -2356,10 +2390,10 @@ function getUsageLabel(term: DevTerm) {
     return '투자 구조에서 쓰는 법'
   }
   if (term.deck === 'roblox') {
-    return 'Roblox 구조에서 쓰는 법'
+    return '로블록스에서 쓰는 법'
   }
   if (term.deck === 'foundry-lab') {
-    return 'Foundry 구조에서 쓰는 법'
+    return '파운드리에서 쓰는 법'
   }
   return '학습 사용 예'
 }
@@ -2375,10 +2409,10 @@ function getTrainingTitle(deck: DeckId) {
     return '투자 구조 질문 훈련'
   }
   if (deck === 'roblox') {
-    return 'Roblox 구조 질문 훈련'
+    return '로블록스 구조 질문 훈련'
   }
   if (deck === 'foundry-lab') {
-    return 'Foundry 구조 질문 훈련'
+    return '파운드리 구조 질문 훈련'
   }
   if (deck === 'development') {
     return '개발 구조 질문 훈련'
@@ -2386,12 +2420,12 @@ function getTrainingTitle(deck: DeckId) {
   if (deck === 'libraries-tools') {
     return '도구 활용 질문 훈련'
   }
-  return 'JOOVIS 구조 질문 훈련'
+  return '주비스 구조 질문 훈련'
 }
 
 function getTrainingSubtitle(deck: DeckId) {
   if (deck === 'ai-command') {
-    return '모호한 표현을 더 정확한 한국어/영어 지시문으로 바꾸고, 목표·경계·출력·검증 조건을 직접 채워봅니다.'
+    return '모호한 표현을 한국어 지시문으로 바꾸고, 목표·경계·출력·검증 조건을 채워 봅니다.'
   }
   if (deck === 'dispute-integration') {
     return '자료, 주장, 원본대조, 인용 가능 범위와 민감정보 조건을 분리해 안전한 검토 질문으로 바꿉니다.'
@@ -2400,10 +2434,10 @@ function getTrainingSubtitle(deck: DeckId) {
     return '용어를 데이터 입력, 변환, 상태, 검증, 실행 경계로 나눠 시스템 안의 위치를 묻는 질문으로 바꿉니다.'
   }
   if (deck === 'roblox') {
-    return '용어를 Client/Server, 복제, 저장 수명, 실패 처리, 관측 지표로 나눠 구조를 확인하는 질문으로 바꿉니다.'
+    return '클라이언트·서버, 복제, 저장 기간, 실패 처리, 관측 지표를 묻는 질문을 만들어 봅니다.'
   }
   if (deck === 'foundry-lab') {
-    return '용어를 Context, Model, Harness, Tool, State, Eval, 복구 책임으로 나눠 구조를 확인하는 질문으로 바꿉니다.'
+    return '맥락, 모델, 실행 환경, 도구, 상태, 평가와 복구를 누가 맡는지 묻는 질문을 만들어 봅니다.'
   }
   if (deck === 'development') {
     return '입력, 처리, 상태, 출력, 오류 경계로 나눠 코드와 시스템의 작동 원리를 묻는 질문으로 바꿉니다.'
@@ -2411,7 +2445,7 @@ function getTrainingSubtitle(deck: DeckId) {
   if (deck === 'libraries-tools') {
     return '도구의 책임, 입력·출력, 실행 시점, 대체 수단과 실패 조건을 구분해 실제 활용 질문으로 바꿉니다.'
   }
-  return '용어를 소유권, 상태, 경계, 전이, 검증 책임으로 나눠 JOOVIS 구조를 읽는 질문으로 바꿉니다.'
+  return '담당 주체, 상태, 경계, 상태 변화와 검증 책임을 묻는 질문을 만들어 봅니다.'
 }
 
 function getUsageText(term: DevTerm) {
@@ -2510,6 +2544,8 @@ function findTermByName(termName: string, preferredDeck: DeckId) {
   return (
     devTerms.find((term) => term.deck === preferredDeck && normalizeTermKey(term.term) === target) ??
     devTerms.find((term) => normalizeTermKey(term.term) === target) ??
+    devTerms.find((term) => term.deck === preferredDeck && getTermNameKeys(term).includes(target)) ??
+    devTerms.find((term) => getTermNameKeys(term).includes(target)) ??
     devTerms.find((term) => term.deck === preferredDeck && normalizeTermKey(term.koreanMeaning) === target) ??
     devTerms.find((term) => normalizeTermKey(term.koreanMeaning) === target)
   )
@@ -2524,9 +2560,10 @@ function findReportMatches(reportText: string, terms: DevTerm[]) {
   return terms
     .map((term) => {
       const candidates = [
-        ['영어 용어', term.term],
+        ['원어', term.term],
+        ['한국어 이름', term.koreanName],
         ['한국어 의미', term.koreanMeaning],
-        ['발음', term.pronunciation],
+        ['한글 발음', term.pronunciation],
         ['좋은 표현', term.goodExpression],
         ['프롬프트', term.gptPromptExample],
         ['Codex 예시', term.codexPromptExample],
@@ -2541,7 +2578,7 @@ function findReportMatches(reportText: string, terms: DevTerm[]) {
       return match
         ? {
             term,
-            reason: `${match[0]} 매칭`,
+            reason: `${match[0]} 일치`,
             weight: normalizeTermKey(match[1] ?? '').length + getDifficultyWeight(term.difficulty),
           }
         : null
@@ -2563,6 +2600,10 @@ function getDifficultyWeight(difficulty: DevTerm['difficulty']) {
 
 function normalizeTermKey(value: string) {
   return value.normalize('NFKC').toLocaleLowerCase('ko-KR').replace(/[^\p{L}\p{N}]+/gu, '')
+}
+
+function getTermNameKeys(term: DevTerm) {
+  return [term.term, term.koreanName, term.pronunciation].map(normalizeTermKey)
 }
 
 function pickRandomTerm(terms: DevTerm[], currentId: string | null, seed?: string) {
@@ -2603,7 +2644,7 @@ function getDateKey(date: Date) {
 }
 
 function normalizeText(value: string) {
-  return value.trim().toLocaleLowerCase('ko-KR')
+  return value.normalize('NFKC').trim().toLocaleLowerCase('ko-KR')
 }
 
 function hashString(value: string) {

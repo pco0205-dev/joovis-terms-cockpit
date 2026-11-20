@@ -7,10 +7,10 @@ export const deckDefinitions = [
   },
   {
     id: 'foundry-lab',
-    label: 'Foundry Lab',
-    title: 'Foundry Lab 구조 학습장',
+    label: '파운드리',
+    title: '파운드리 구조 학습장',
     helperText:
-      'Foundry Lab 문서에서 확인한 후보·실험·평가·증거·통합 용어를 현행·목표·개념 상태로 나눠 익힙니다.',
+      '후보·실험·평가·증거·통합 용어를 익힙니다.',
   },
   {
     id: 'development',
@@ -26,23 +26,23 @@ export const deckDefinitions = [
   },
   {
     id: 'joovis-architecture',
-    label: 'JOOVIS',
-    title: 'JOOVIS 아키텍처 학습장',
-    helperText: 'JOOVIS 문서의 데이터·판단·권한·실행 구조를 현행·목표·개념 상태로 나눠 익힙니다.',
+    label: '주비스',
+    title: '주비스 구조 학습장',
+    helperText: '주비스 본선과 공통 저장소에서 쓰는 데이터·판단·권한·협업 용어를 익힙니다.',
   },
   {
     id: 'investment-analysis',
     label: '투자 구조',
-    title: 'JOOVIS 투자 구조 학습장',
+    title: '주비스 투자 구조 학습장',
     helperText:
       '데이터 수집부터 판단·위험·검증·실행 경계까지 익히는 학습용 개념 지도입니다. 비공개 구현 현황이나 매수·매도 추천이 아닙니다.',
   },
   {
     id: 'roblox',
-    label: 'Roblox',
-    title: 'Roblox 구조 학습장',
+    label: '로블록스',
+    title: '로블록스 구조 학습장',
     helperText:
-      'Roblox의 플랫폼·클라이언트/서버·복제·데이터·LiveOps·창작자 경제 용어를 익힙니다.',
+      '로블록스의 클라이언트·서버, 데이터 복제, 출시 후 운영과 창작자 경제 용어를 익힙니다.',
   },
   {
     id: 'dispute-integration',
@@ -85,6 +85,7 @@ export type SavedExpression = {
 export type DevTerm = {
   id: string
   term: string
+  koreanName: string
   pronunciation: string
   koreanMeaning: string
   simpleMeaning: string
@@ -119,8 +120,8 @@ export type DevTerm = {
 
 export type RawDevTerm = Omit<
   DevTerm,
-  'deck' | 'domainLabel' | 'difficulty' | 'learningPriority' | 'selectionReason'
+  'koreanName' | 'deck' | 'domainLabel' | 'difficulty' | 'learningPriority' | 'selectionReason'
 > &
   Partial<
-    Pick<DevTerm, 'deck' | 'domainLabel' | 'difficulty' | 'learningPriority' | 'selectionReason'>
+    Pick<DevTerm, 'koreanName' | 'deck' | 'domainLabel' | 'difficulty' | 'learningPriority' | 'selectionReason'>
   >
